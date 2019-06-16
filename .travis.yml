@@ -10,7 +10,7 @@ services:
   - docker
 
 before_install:
-  - docker pull loganbarnes/grpcw-ci:grpc
+  - docker pull loganbarnes/gvs-ci:grpc
 
 install:
   # All compiled dependencies are installed in ${TRAVIS_BUILD_DIR}/deps/
@@ -25,7 +25,7 @@ install:
   - cmake --version
 
 script:
-  - docker run -v ${TRAVIS_BUILD_DIR}:/grpcw -v ${DEPS_DIR}:/deps loganbarnes/grpcw-ci:grpc bash -c "cd /aws && . ./ci/install_deps.sh && ./ci/build_and_run.sh"
+  - docker run -v ${TRAVIS_BUILD_DIR}:/grpcw -v ${DEPS_DIR}:/deps loganbarnes/gvs-ci:grpc bash -c "cd /aws && . ./ci/install_deps.sh && ./ci/build_and_run.sh"
 
 after_success:
   # Upload report to CodeCov
