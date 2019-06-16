@@ -22,7 +22,10 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+// third-party
 #include <grpc++/client_context.h>
+
+// standard
 #include <thread>
 
 namespace grpcw {
@@ -69,10 +72,10 @@ void GrpcClientStream<Service, Return, InitFunc, Callback>::start_stream(
         return;
     }
 
-    context_ = std::make_unique<grpc::ClientContext>();
+    context_ = std::make_shared<grpc::ClientContext>();
     reader_ = init_func_(stub, context_.get());
 
-    stream_thread_ = std::make_unique<std::thread>([this] {
+    stream_thread_ = std::make_shared<std::thread>([this] {
         Return update;
 
         while (reader_->Read(&update)) {

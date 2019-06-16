@@ -25,7 +25,10 @@ install:
   - cmake --version
 
 script:
-  - docker run -v ${TRAVIS_BUILD_DIR}:/grpcw -v ${DEPS_DIR}:/deps loganbarnes/gvs-ci:grpc bash -c "cd /grpcw && . ./ci/install_deps.sh && ./ci/build_and_run.sh"
+  - |
+    docker run -v ${TRAVIS_BUILD_DIR}:/grpcw \
+    -v ${DEPS_DIR}:/deps loganbarnes/gvs-ci:grpc bash \
+    -c "cd /grpcw && . ./ci/install_deps.sh && ./ci/build_and_run.sh"
 
 after_success:
   # Upload report to CodeCov

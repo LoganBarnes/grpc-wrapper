@@ -20,31 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#pragma once
+#include "grpcw/grpc_client_state.hpp"
 
 // third-party
-#include <google/protobuf/message.h>
-#include <google/protobuf/util/message_differencer.h>
+#include <doctest/doctest.h>
 
 // standard
-#include <ostream>
+#include <sstream>
 
-namespace grpcw {
-namespace testing {
-namespace protocol {
+using namespace grpcw;
 
-template <typename Proto,
-          typename = typename std::enable_if<std::is_base_of<google::protobuf::Message, Proto>::value>::type>
-::std::ostream& operator<<(::std::ostream& os, const Proto& proto) {
-    return os << proto.DebugString();
+TEST_CASE("[grpcw] testing the GrpcClientState string functions") {
+    std::stringstream ss;
+
+    SUBCASE("not_connected_string") {
+        ss << GrpcClientState::not_connected;
+        CHECK(ss.str() == "not_connected");
+    }
+
+    SUBCASE("attempting_to_connect_string") {
+        ss << GrpcClientState::attempting_to_connect;
+        CHECK(ss.str() == "attempting_to_connect");
+    }
+
+    SUBCASE("connected_string") {
+        ss << GrpcClientState::connected;
+        CHECK(ss.str() == "connected");
+    }
+
+    SUBCASE("invalid_GrpcClientState_string") {
+        // Really have to do some shadily incorrect coding to cause this
+        CHECK_THROWS_AS(ss << static_cast<GrpcClientState>(-1), std::invalid_argument);
+    }
 }
-
-template <typename Proto,
-          typename = typename std::enable_if<std::is_base_of<google::protobuf::Message, Proto>::value>::type>
-bool operator==(const Proto& lhs, const Proto& rhs) {
-    return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);
-}
-
-} // namespace protocol
-} // namespace testing
-} // namespace grpcw

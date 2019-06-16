@@ -30,8 +30,7 @@ namespace testing {
 namespace util {
 
 TestServer::TestServer(const std::string& server_address)
-    : server_(new GrpcServer(std::make_shared<TestService>(), server_address)),
-      run_thread_([&] { server_->run(); }) {}
+    : server_(new GrpcServer(std::make_shared<TestService>(), server_address)), run_thread_([&] { server_->run(); }) {}
 
 TestServer::~TestServer() {
     server_->shutdown();
@@ -52,8 +51,8 @@ std::shared_ptr<grpc::Channel> TestServer::inprocess_channel() {
 
 // third-party
 #include <doctest/doctest.h>
-#include <grpc++/create_channel.h>
 #include <grpc++/channel.h>
+#include <grpc++/create_channel.h>
 
 using namespace grpcw;
 

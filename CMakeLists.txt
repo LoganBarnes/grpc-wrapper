@@ -149,8 +149,8 @@ if (${GRPCW_BUILD_TESTS})
         target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS} ${PROFILE_FLAGS})
         target_link_libraries(grpc-wrapper PRIVATE gcov)
 
-        target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS} ${PROFILE_FLAGS})
-        target_link_libraries(grpc-wrapper PRIVATE gcov)
+        target_compile_options(grpc-wrapper-tests PRIVATE ${GRPCW_COMPILE_FLAGS} ${PROFILE_FLAGS})
+        target_link_libraries(grpc-wrapper-tests PRIVATE gcov)
     endif ()
 
     set_target_properties(
