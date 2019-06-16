@@ -69,7 +69,7 @@ inline ::std::ostream& operator<<(::std::ostream& os, grpc_connectivity_state st
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[grpcw-grpcw] testing the grpc_connectivity_state string functions") {
+TEST_CASE("[grpcw] testing the grpc_connectivity_state string functions") {
     std::stringstream ss;
 
     SUBCASE("GRPC_CHANNEL_CONNECTING_string") {
@@ -125,7 +125,7 @@ inline GrpcClientState to_typed_state(grpc_connectivity_state state) {
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[grpcw-grpcw] testing the grpc_connectivity_state string functions") {
+TEST_CASE("[grpcw] testing the grpc_connectivity_state string functions") {
     std::stringstream ss;
 
     SUBCASE("GRPC_CHANNEL_CONNECTING_to_typed_state") {

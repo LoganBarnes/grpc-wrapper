@@ -98,7 +98,7 @@ NonStreamRpcHandler<Service, Request, Response, Callback>::NonStreamRpcHandler(
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[grpcw-grpcw] tests NonStreamRpcConnection") {
+TEST_CASE("[grpcw] tests NonStreamRpcConnection") {
     using namespace grpcw::test::proto;
     //    std::unique_ptr<AsyncRpcHandlerInterface> rpc_handle;
     // TODO: Make/use a test server
