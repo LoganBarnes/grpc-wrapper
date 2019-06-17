@@ -22,9 +22,12 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+// grpcw
+#include "grpcw/detail/atomic_data.hpp"
 #include "grpcw/detail/non_stream_rpc_handler.hpp"
 #include "grpcw/detail/stream_rpc_handler.hpp"
 
+// third-party
 #include <grpc++/security/server_credentials.h>
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
@@ -54,7 +57,7 @@ private:
     std::unique_ptr<grpc::ServerCompletionQueue> server_queue_;
     std::unique_ptr<grpc::Server> server_;
 
-    util::AtomicData<std::unordered_map<void*, std::unique_ptr<detail::AsyncRpcHandlerInterface>>> rpc_handlers_;
+    detail::AtomicData<std::unordered_map<void*, std::unique_ptr<detail::AsyncRpcHandlerInterface>>> rpc_handlers_;
 
     std::thread run_thread_;
 };

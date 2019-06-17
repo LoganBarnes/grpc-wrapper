@@ -22,26 +22,70 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-// generated
-#include <testing.grpc.pb.h>
+// standard
+#include <mutex>
 
 namespace grpcw {
-namespace testing {
-namespace util {
+namespace detail {
 
-class TestService : public protocol::Test::Service {
+/**
+ * @brief Owns complex data that can be accessed in a thread safe way.
+ *
+ * Example:
+ *
+ *     struct MyComplexData {
+ *         int thing1;
+ *         bool thing2;
+ *         std::vector<double> more_things;
+ *         OtherStruct complex_thing;
+ *     };
+ *
+ *     AtomicData<MyComplexData> shared_data;
+ *
+ *     ... Later, in different threads
+ *
+ *     shared_data.use_safely([] (MyComplexData& data) {
+ *         // Do things with 'data' here:
+ *         ...
+ *     });
+ *
+ *     ...
+ */
+template <typename T>
+class AtomicData {
 public:
-    TestService();
-    ~TestService() override;
+    explicit AtomicData(T data = {});
 
-    grpc::Status
-    echo(grpc::ServerContext* context, const protocol::TestMessage* request, protocol::TestMessage* response) override;
+    /**
+     * @brief Use the data in a thread safe manner.
+     */
+    template <typename Func>
+    void use_safely(const Func& func);
 
-    grpc::Status endless_echo_stream(grpc::ServerContext* context,
-                                     const protocol::TestMessage* request,
-                                     grpc::ServerWriter<protocol::TestMessage>* writer) override;
+    template <typename Func>
+    void use_safely(const Func& func) const;
+
+private:
+    mutable std::mutex lock_; // mutable so it can be used with const functions
+    T data_;
 };
 
-} // namespace util
-} // namespace testing
+template <typename T>
+AtomicData<T>::AtomicData(T data) : data_(std::move(data)) {}
+
+template <typename T>
+template <typename Func>
+void AtomicData<T>::use_safely(const Func& func) {
+    std::lock_guard<std::mutex> scoped_lock(lock_);
+    func(data_);
+}
+
+template <typename T>
+template <typename Func>
+void AtomicData<T>::use_safely(const Func& func) const {
+    std::lock_guard<std::mutex> scoped_lock(lock_);
+    func(data_);
+}
+
+} // namespace detail
 } // namespace grpcw

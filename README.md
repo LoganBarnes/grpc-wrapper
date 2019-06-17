@@ -5,7 +5,7 @@ gRPC Wrapper
 [![MIT License][license-badge]][license-link]
 [![Docs][docs-badge]][docs-link]
 
-C++ wrapper classes around the [gRPC][grpc-link].
+(Incomplete) C++ wrapper classes around the [gRPC][grpc-link].
 
 [travis-badge]: https://travis-ci.org/LoganBarnes/grpc-wrapper.svg?branch=master
 [travis-link]: https://travis-ci.org/LoganBarnes/grpc-wrapper

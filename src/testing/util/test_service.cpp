@@ -29,6 +29,9 @@ namespace grpcw {
 namespace testing {
 namespace util {
 
+TestService::TestService() : protocol::Test::Service() {}
+TestService::~TestService() = default;
+
 grpc::Status TestService::echo(grpc::ServerContext* /*context*/,
                                const protocol::TestMessage* request,
                                protocol::TestMessage* response) {
