@@ -135,7 +135,6 @@ TEST_CASE("[grpcw-test-util] run_test_server_and_check_echo_streaming_rpc_call")
         REQUIRE(response.msg().empty());
 
         if (!reader->Read(&response)) {
-            std::cerr << "EYE: " << i << std::endl;
             break;
         }
         if (i == 500) {
@@ -146,5 +145,4 @@ TEST_CASE("[grpcw-test-util] run_test_server_and_check_echo_streaming_rpc_call")
     grpc::Status status = reader->Finish();
 
     CHECK_FALSE(status.ok());
-    std::cerr << "EYE: " << status.error_message() << std::endl;
 }
