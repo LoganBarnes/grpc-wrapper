@@ -22,12 +22,8 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "grpcw/util/blocking_queue.hpp"
-
 #include <grpc++/completion_queue.h>
 #include <grpc++/server_context.h>
-
-#include <experimental/optional>
 
 namespace grpcw {
 

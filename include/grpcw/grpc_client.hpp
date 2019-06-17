@@ -33,6 +33,7 @@
 #include <grpc++/create_channel.h>
 
 // standard
+#include <cassert>
 #include <functional>
 #include <thread>
 #include <unordered_map>
