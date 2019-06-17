@@ -33,6 +33,10 @@ class TestService : public protocol::Test::Service {
 public:
     grpc::Status
     echo(grpc::ServerContext* context, const protocol::TestMessage* request, protocol::TestMessage* response) override;
+
+    grpc::Status endless_echo_stream(grpc::ServerContext* context,
+                                     const protocol::TestMessage* request,
+                                     grpc::ServerWriter<protocol::TestMessage>* writer) override;
 };
 
 } // namespace util

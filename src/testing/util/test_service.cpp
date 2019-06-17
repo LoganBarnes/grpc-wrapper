@@ -36,6 +36,17 @@ grpc::Status TestService::echo(grpc::ServerContext* /*context*/,
     return grpc::Status::OK;
 }
 
+grpc::Status TestService::endless_echo_stream(grpc::ServerContext* context,
+                                              const protocol::TestMessage* request,
+                                              grpc::ServerWriter<protocol::TestMessage>* writer) {
+    while (writer->Write(*request)) {
+        if (context->IsCancelled()) {
+            return grpc::Status::CANCELLED;
+        }
+    }
+    return grpc::Status::OK;
+}
+
 } // namespace util
 } // namespace testing
 } // namespace grpcw

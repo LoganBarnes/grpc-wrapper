@@ -104,3 +104,47 @@ TEST_CASE("[grpcw-test-util] run_inprocess_test_server_and_check_echo_rpc_call")
     CHECK(status.ok());
     CHECK(response.msg() == test_msg);
 }
+
+TEST_CASE("[grpcw-test-util] run_test_server_and_check_echo_streaming_rpc_call") {
+    // Create a server and run it in a separate thread
+    std::string server_address = "0.0.0.0:50050";
+    testing::util::TestServer server(server_address);
+
+    // Create a client to connect to the server
+    auto channel = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
+    auto stub = testing::protocol::Test::NewStub(channel);
+
+    // Send a message to the server
+    std::string test_msg = "a1, 23kqv9 !F(VMas3982fj!#!#+(*@)(a assdaf;le 1342 asdw32nm";
+
+    testing::protocol::TestMessage request = {};
+    request.set_msg(test_msg);
+
+    grpc::ClientContext context;
+    testing::protocol::TestMessage response;
+
+    auto reader = stub->endless_echo_stream(&context, request);
+
+    reader->Read(&response);
+
+    for (int i = 0; i < 1000000; ++i) {
+        // Check the server recieved the message and responded with the same message
+        CHECK(request == response);
+        CHECK(response.msg() == test_msg);
+        response.clear_msg();
+        REQUIRE(response.msg().empty());
+
+        if (!reader->Read(&response)) {
+            std::cerr << "EYE: " << i << std::endl;
+            break;
+        }
+        if (i == 500) {
+            context.TryCancel();
+        }
+    }
+
+    grpc::Status status = reader->Finish();
+
+    CHECK_FALSE(status.ok());
+    std::cerr << "EYE: " << status.error_message() << std::endl;
+}
