@@ -23,18 +23,20 @@
 #include "example_client.hpp"
 
 // grpcw
+#include "grpcw/client/grpc_client.hpp"
 #include "grpcw/util/make_unique.hpp"
 
 namespace example {
 using namespace grpcw;
 
-ExampleClient::ExampleClient(const std::string& host_address) {
+ExampleClient::ExampleClient(const std::string& host_address)
+    : grpc_client_(util::make_unique<client::GrpcClient<protocol::Clock>>()) {
 
-    grpc_client_.change_server(host_address,
-                               [this](const client::GrpcClientState& state) { handle_state_change(state); });
+    grpc_client_->change_server(host_address,
+                                [this](const client::GrpcClientState& state) { handle_state_change(state); });
 
     // Connect to the stream that delivers time updates
-    grpc_client_.register_stream<protocol::Time>(
+    grpc_client_->register_stream<protocol::Time>(
         [](const std::unique_ptr<protocol::Clock::Stub>& stub, grpc::ClientContext* context) {
             google::protobuf::Empty empty;
             return stub->GetServerTimeUpdates(context, empty);
@@ -45,7 +47,7 @@ ExampleClient::ExampleClient(const std::string& host_address) {
 std::string ExampleClient::get_server_time_now(const protocol::Format& format) {
     protocol::Time time;
 
-    if (grpc_client_.use_stub([&time, &format](const std::unique_ptr<protocol::Clock::Stub>& stub) {
+    if (grpc_client_->use_stub([&time, &format](const std::unique_ptr<protocol::Clock::Stub>& stub) {
             // This lambda is only used if the client is connected
             grpc::ClientContext context;
             protocol::FormatRequest format_request;

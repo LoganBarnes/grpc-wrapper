@@ -27,7 +27,13 @@ namespace server {
 
 class GrpcServer;
 
-}
+template <typename Service>
+class GrpcAsyncServer;
+
+template <typename Response>
+class StreamInterface;
+
+} // namespace server
 
 namespace client {
 
@@ -40,6 +46,7 @@ class GrpcClientStreamInterface;
 template <typename Service, typename Return, typename InitFunc, typename Callback>
 class GrpcClientStream;
 
-} // namespace client
+enum class GrpcClientState;
 
+} // namespace client
 } // namespace grpcw

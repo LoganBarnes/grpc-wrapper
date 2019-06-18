@@ -47,7 +47,7 @@
 #pragma once
 
 // grpcw
-#include "grpcw/server/grpc_async_server.hpp"
+#include "grpcw/forward_declarations.hpp"
 
 // generated
 #include <example.grpc.pb.h>
@@ -69,12 +69,12 @@ private:
     const TimePoint server_start_time_;
 
     using Service = protocol::Clock::AsyncService;
-    grpcw::server::GrpcAsyncServer<Service> server_;
+    std::unique_ptr<grpcw::server::GrpcAsyncServer<Service>> server_;
 
     // send back updates to clients
     grpcw::server::StreamInterface<protocol::Time>* time_stream_;
 
-    std::thread ticker_;
+    std::thread ticker_ = {};
     std::atomic_bool keep_ticking_;
 
     grpc::Status get_time(const protocol::FormatRequest& request, protocol::Time* time);

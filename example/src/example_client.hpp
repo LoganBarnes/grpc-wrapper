@@ -22,8 +22,10 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "grpcw/client/grpc_client.hpp"
+// grpcw
+#include "grpcw/forward_declarations.hpp"
 
+// generated
 #include <example.grpc.pb.h>
 
 namespace example {
@@ -35,7 +37,7 @@ public:
     std::string get_server_time_now(const protocol::Format& format);
 
 private:
-    grpcw::client::GrpcClient<protocol::Clock> grpc_client_;
+    std::unique_ptr<grpcw::client::GrpcClient<protocol::Clock>> grpc_client_;
     bool connected_ = false;
 
     void handle_state_change(const grpcw::client::GrpcClientState& state);
