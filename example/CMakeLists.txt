@@ -20,38 +20,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-# search directory for protobuf (still needed?)
-#set(PROTOBUF_IMPORT_DIRS ${CMAKE_CURRENT_LIST_DIR})
+create_proto_library(
+        example-protos
+        ${CMAKE_CURRENT_LIST_DIR}/protos
+        ${CMAKE_BINARY_DIR}/generated/protos
+)
 
-function(create_proto_library target_name proto_dir cpp_output_dir)
-    # make the output directory
-    file(MAKE_DIRECTORY ${cpp_output_dir})
+add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
+add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
 
-    # gather proto files
-    file(GLOB_RECURSE PROTO_FILES
-            LIST_DIRECTORIES false
-            CONFIGURE_DEPENDS
-            ${proto_dir}/*.proto
-            )
+target_link_libraries(example-client PRIVATE grpc-wrapper example-protos)
+target_link_libraries(example-server PRIVATE grpc-wrapper example-protos)
 
-    # generate service objects
-    protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${cpp_output_dir} ${PROTO_FILES})
-    grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${cpp_output_dir} ${PROTO_FILES})
+target_compile_options(example-client PRIVATE ${GRPCW_COMPILE_FLAGS})
+target_compile_options(example-server PRIVATE ${GRPCW_COMPILE_FLAGS})
 
-    add_library(${target_name} ${PROTO_HDRS} ${PROTO_SRCS} ${GRPC_HDRS} ${GRPC_SRCS})
-    target_link_libraries(${target_name}
-            PUBLIC protobuf::libprotobuf
-            PUBLIC gRPC::grpc++
-            PUBLIC ${CMAKE_DL_LIBS}
-            PUBLIC Threads::Threads
-            )
-    target_include_directories(${target_name} SYSTEM PUBLIC ${cpp_output_dir})
-endfunction()
-
-if (${GRPCW_BUILD_TESTS})
-    create_proto_library(
-            testing-protos
-            ${CMAKE_CURRENT_LIST_DIR}/testing
-            ${CMAKE_BINARY_DIR}/generated/protos
-    )
-endif ()
+set_target_properties(
+        example-client
+        example-server
+        PROPERTIES
+        CXX_STANDARD ${GRPCW_CXX_STANDARD}
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+        POSITION_INDEPENDENT_CODE ON
+        CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)

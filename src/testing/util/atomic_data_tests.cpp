@@ -118,4 +118,88 @@ TEST_CASE_TEMPLATE("[grpcw-util] interleaved_atomic_data", T, short, int, unsign
     });
 }
 
+TEST_CASE("[grpcw-util] atomic_data_notify_all") {
+
+    struct SharedData {
+        bool write_away = false;
+        int num_threads = 0;
+    };
+    util::AtomicData<SharedData> shared_data;
+
+    std::array<std::thread, 500> threads;
+
+    // Wait for 'notify_all' from the main thread then safely increment 'num_threads' once per thread
+    for (auto& thread : threads) {
+        thread = std::thread([&] {
+            shared_data.wait_to_use_safely([](const SharedData& data) { return data.write_away; },
+                                           [](SharedData& data) { ++data.num_threads; });
+        });
+    }
+
+    // notify all the threads at once
+    shared_data.use_safely([](SharedData& data) { data.write_away = true; });
+    shared_data.notify_all();
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // 'num_threads' should exactly equal the amount of threads we created
+    shared_data.use_safely([&](const SharedData& data) { CHECK(data.num_threads == threads.size()); });
+}
+
+TEST_CASE_TEMPLATE("[grpcw-util] interleaved_atomic_data", T, short, int, unsigned, float, double) {
+    struct SharedData {
+        T current_number = 0;
+        std::vector<T> all_data = {};
+        std::vector<T> odds = {};
+        std::vector<T> even = {};
+        bool writing_odds = false;
+    };
+
+    constexpr short max_number = 9;
+
+    // Use AtomicData structure to update data from two threads
+    util::AtomicData<SharedData> shared_data;
+
+    // Write odd numbers
+    std::thread thread([&] {
+        bool stop_loop;
+        do {
+            shared_data.wait_to_use_safely([](const SharedData& data) { return data.writing_odds; },
+                                           [&](SharedData& data) {
+                                               data.all_data.emplace_back(data.current_number++);
+                                               data.odds.emplace_back(data.all_data.back());
+                                               stop_loop = data.current_number >= max_number;
+                                               data.writing_odds = false;
+                                           });
+            shared_data.notify_one();
+        } while (not stop_loop);
+    });
+
+    // Write even numbers
+    bool stop_loop;
+    do {
+        shared_data.wait_to_use_safely([](const SharedData& data) { return not data.writing_odds; },
+                                       [&](SharedData& data) {
+                                           data.all_data.emplace_back(data.current_number++);
+                                           data.even.emplace_back(data.all_data.back());
+                                           stop_loop = data.current_number >= max_number;
+                                           data.writing_odds = true;
+                                       });
+        shared_data.notify_one();
+    } while (not stop_loop);
+
+    thread.join();
+
+    // shared_data should be correctly ordered despite being modified by separate threads
+    shared_data.use_safely([&](const SharedData& data) {
+        CHECK(data.current_number == max_number + 1);
+        CHECK(data.even == std::vector<T>{0, 2, 4, 6, 8});
+        CHECK(data.odds == std::vector<T>{1, 3, 5, 7, 9});
+        CHECK(data.all_data == std::vector<T>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+        CHECK_FALSE(data.writing_odds);
+    });
+}
+
 } // namespace

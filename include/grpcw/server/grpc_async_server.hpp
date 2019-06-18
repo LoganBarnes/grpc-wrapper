@@ -23,9 +23,10 @@
 #pragma once
 
 // grpcw
-#include "grpcw/detail/atomic_data.hpp"
-#include "grpcw/detail/non_stream_rpc_handler.hpp"
-#include "grpcw/detail/stream_rpc_handler.hpp"
+#include "grpcw/server/detail/non_stream_rpc_handler.hpp"
+#include "grpcw/server/detail/stream_rpc_handler.hpp"
+#include "grpcw/util/atomic_data.hpp"
+#include "grpcw/util/make_unique.hpp"
 
 // third-party
 #include <grpc++/security/server_credentials.h>
@@ -33,6 +34,7 @@
 #include <grpc++/server_builder.h>
 
 namespace grpcw {
+namespace server {
 
 template <typename Service>
 class GrpcAsyncServer {
@@ -57,7 +59,8 @@ private:
     std::unique_ptr<grpc::ServerCompletionQueue> server_queue_;
     std::unique_ptr<grpc::Server> server_;
 
-    detail::AtomicData<std::unordered_map<void*, std::unique_ptr<detail::AsyncRpcHandlerInterface>>> rpc_handlers_;
+    using RpcMap = std::unordered_map<void*, std::unique_ptr<detail::AsyncRpcHandlerInterface>>;
+    util::AtomicData<RpcMap> rpc_handlers_;
 
     std::thread run_thread_;
 };
@@ -79,9 +82,9 @@ GrpcAsyncServer<Service>::GrpcAsyncServer(std::shared_ptr<Service> service, cons
 
         while (server_queue_->Next(&tag, &call_ok)) {
             if (call_ok) {
-                rpc_handlers_.use_safely([&](auto& rpc_handlers) { rpc_handlers.at(tag)->activate_next(); });
+                rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.at(tag)->activate_next(); });
             } else {
-                rpc_handlers_.use_safely([&](auto& rpc_handlers) { rpc_handlers.erase(tag); });
+                rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.erase(tag); });
             }
         }
     });
@@ -100,14 +103,14 @@ template <typename BaseService, typename Request, typename Response, typename Ca
 void GrpcAsyncServer<Service>::register_async(AsyncNoStreamFunc<BaseService, Request, Response> no_stream_func,
                                               Callback&& callback) {
     static_assert(std::is_base_of<BaseService, Service>::value, "BaseService must be a base class of Service");
-    auto handler = std::make_unique<
+    auto handler = util::make_unique<
         detail::NonStreamRpcHandler<BaseService, Request, Response, Callback>>(*service_,
                                                                                *server_queue_,
                                                                                no_stream_func,
                                                                                std::forward<Callback>(callback));
 
     void* tag = handler.get();
-    rpc_handlers_.use_safely([&](auto& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
+    rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
 }
 
 template <typename Service>
@@ -117,14 +120,14 @@ GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseServic
                                                 Callback&& callback) {
     static_assert(std::is_base_of<BaseService, Service>::value, "BaseService must be a base class of Service");
     auto handler
-        = std::make_unique<detail::StreamRpcHandler<BaseService, Request, Response, Callback>>(*service_,
-                                                                                               *server_queue_,
-                                                                                               stream_func,
-                                                                                               std::forward<Callback>(
-                                                                                                   callback));
+        = util::make_unique<detail::StreamRpcHandler<BaseService, Request, Response, Callback>>(*service_,
+                                                                                                *server_queue_,
+                                                                                                stream_func,
+                                                                                                std::forward<Callback>(
+                                                                                                    callback));
 
     auto* tag = handler.get();
-    rpc_handlers_.use_safely([&](auto& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
+    rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
     return tag;
 }
 
@@ -133,4 +136,5 @@ grpc::Server& GrpcAsyncServer<Service>::server() {
     return *server_;
 }
 
+} // namespace server
 } // namespace grpcw

@@ -24,6 +24,7 @@ cmake_minimum_required(VERSION 3.12)
 project(gRPC-Wrapper LANGUAGES CXX)
 
 option(GRPCW_BUILD_TESTS "Build unit tests" OFF)
+option(GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
 option(GRPCW_USE_DEV_FLAGS "Compile with all the flags" OFF)
 
 #############################
@@ -165,4 +166,11 @@ if (${GRPCW_BUILD_TESTS})
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     )
+endif ()
+
+###############
+### Example ###
+###############
+if (${GRPCW_BUILD_EXAMPLE})
+    add_subdirectory(example)
 endif ()

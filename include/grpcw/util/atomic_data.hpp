@@ -23,6 +23,7 @@
 #pragma once
 
 // standard
+#include <condition_variable>
 #include <mutex>
 
 namespace grpcw {
@@ -63,8 +64,29 @@ public:
     template <typename Func>
     void use_safely(const Func& func) const;
 
+    ///
+    /// \brief Wait for 'notify_one' or 'notify_all' to be called on this data
+    ///        structure before using the data in a thread safe manner.
+    ///
+    template <typename Pred, typename Func>
+    void wait_to_use_safely(const Pred& predicate, const Func& func);
+
+    template <typename Pred, typename Func>
+    void wait_to_use_safely(const Pred& predicate, const Func& func) const;
+
+    ///
+    /// \brief Allow one 'wait_to_use_safely' function to continue.
+    ///
+    void notify_one();
+
+    ///
+    /// \brief Allow all 'wait_to_use_safely' functions to continue.
+    ///
+    void notify_all();
+
 private:
     mutable std::mutex lock_; // mutable so it can be used with const functions
+    std::condition_variable condition_;
     T data_;
 };
 
@@ -83,6 +105,32 @@ template <typename Func>
 void AtomicData<T>::use_safely(const Func& func) const {
     std::lock_guard<std::mutex> scoped_lock(lock_);
     func(data_);
+}
+
+template <typename T>
+template <typename Pred, typename Func>
+void AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) {
+    std::unique_lock<std::mutex> unlockable_lock(lock_);
+    condition_.wait(unlockable_lock, [&] { return predicate(data_); });
+    func(data_);
+}
+
+template <typename T>
+template <typename Pred, typename Func>
+void AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) const {
+    std::unique_lock<std::mutex> unlockable_lock(lock_);
+    condition_.wait(unlockable_lock, [&] { return predicate(data_); });
+    func(data_);
+}
+
+template <typename T>
+void AtomicData<T>::notify_one() {
+    condition_.notify_one();
+}
+
+template <typename T>
+void AtomicData<T>::notify_all() {
+    condition_.notify_all();
 }
 
 } // namespace util
