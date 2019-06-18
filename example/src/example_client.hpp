@@ -22,12 +22,24 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-namespace grpcw {
-namespace replace_this {
+#include "grpcw/client/grpc_client.hpp"
 
-class example_client {
+#include <example.grpc.pb.h>
 
+namespace example {
+
+class ExampleClient {
+public:
+    explicit ExampleClient(const std::string& host_address);
+
+    std::string get_server_time_now(const protocol::Format& format);
+
+private:
+    grpcw::client::GrpcClient<protocol::Clock> grpc_client_;
+    bool connected_ = false;
+
+    void handle_state_change(const grpcw::client::GrpcClientState& state);
+    void handle_time_update(const protocol::Time& time_update);
 };
 
-} // namespace replace_this
 } // namespace grpcw

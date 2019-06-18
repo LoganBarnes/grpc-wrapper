@@ -205,11 +205,11 @@ void* GrpcClient<Service>::register_stream(InitFunc init_func, Callback callback
     void* key;
 
     shared_data_.use_safely([=, &key](SharedData& data) {
-        auto stream = std::make_shared<GrpcClientStream<Service, Return, InitFunc, Callback>>(init_func, callback);
+        auto stream = util::make_unique<GrpcClientStream<Service, Return, InitFunc, Callback>>(init_func, callback);
 
         // Start the stream if the channel is already connected
         if (data.channel and data.connection_state == GRPC_CHANNEL_READY) {
-            stream->start_stream(*data.stub);
+            stream->start_stream(data.stub);
         }
 
         key = stream.get();

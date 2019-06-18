@@ -22,6 +22,8 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+#include "grpcw/util/make_unique.hpp"
+
 // third-party
 #include <grpc++/client_context.h>
 
@@ -73,10 +75,10 @@ void GrpcClientStream<Service, Return, InitFunc, Callback>::start_stream(
         return;
     }
 
-    context_ = std::make_shared<grpc::ClientContext>();
+    context_ = util::make_unique<grpc::ClientContext>();
     reader_ = init_func_(stub, context_.get());
 
-    stream_thread_ = std::make_shared<std::thread>([this] {
+    stream_thread_ = util::make_unique<std::thread>([this] {
         Return update;
 
         while (reader_->Read(&update)) {

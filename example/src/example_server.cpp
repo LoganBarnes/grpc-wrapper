@@ -34,11 +34,11 @@ namespace {
 
 template <typename Duration>
 void make_pretty_time_string(std::ostream& os, const Duration& duration) {
-    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration - minutes);
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration - minutes - seconds);
+    auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration - hours);
+    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration - hours - minutes);
 
-    os << minutes.count() << "m  " << seconds.count() << "s  " << millis.count() << "ms";
+    os << hours.count() << "h  " << minutes.count() << "m  " << seconds.count() << "s";
 }
 
 } // namespace
