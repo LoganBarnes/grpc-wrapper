@@ -23,69 +23,33 @@
 #pragma once
 
 // standard
-#include <mutex>
+#include <stdexcept>
+#include <string>
 
 namespace grpcw {
-namespace detail {
+namespace client {
 
-/**
- * @brief Owns complex data that can be accessed in a thread safe way.
- *
- * Example:
- *
- *     struct MyComplexData {
- *         int thing1;
- *         bool thing2;
- *         std::vector<double> more_things;
- *         OtherStruct complex_thing;
- *     };
- *
- *     AtomicData<MyComplexData> shared_data;
- *
- *     ... Later, in different threads
- *
- *     shared_data.use_safely([] (MyComplexData& data) {
- *         // Do things with 'data' here:
- *         ...
- *     });
- *
- *     ...
- */
-template <typename T>
-class AtomicData {
-public:
-    explicit AtomicData(T data = {});
-
-    /**
-     * @brief Use the data in a thread safe manner.
-     */
-    template <typename Func>
-    void use_safely(const Func& func);
-
-    template <typename Func>
-    void use_safely(const Func& func) const;
-
-private:
-    mutable std::mutex lock_; // mutable so it can be used with const functions
-    T data_;
+enum class GrpcClientState {
+    not_connected,
+    attempting_to_connect,
+    connected,
 };
 
-template <typename T>
-AtomicData<T>::AtomicData(T data) : data_(std::move(data)) {}
-
-template <typename T>
-template <typename Func>
-void AtomicData<T>::use_safely(const Func& func) {
-    std::lock_guard<std::mutex> scoped_lock(lock_);
-    func(data_);
+inline std::string to_string(const GrpcClientState& state) {
+    switch (state) {
+    case GrpcClientState::not_connected:
+        return "not_connected";
+    case GrpcClientState::attempting_to_connect:
+        return "attempting_to_connect";
+    case GrpcClientState::connected:
+        return "connected";
+    }
+    throw std::invalid_argument("Invalid GrpcClientState");
 }
 
-template <typename T>
-template <typename Func>
-void AtomicData<T>::use_safely(const Func& func) const {
-    std::lock_guard<std::mutex> scoped_lock(lock_);
-    func(data_);
+inline ::std::ostream& operator<<(::std::ostream& os, const GrpcClientState& state) {
+    return os << to_string(state);
 }
 
-} // namespace detail
+} // namespace client
 } // namespace grpcw

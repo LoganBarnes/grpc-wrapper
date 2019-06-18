@@ -26,6 +26,7 @@
 #include <grpc++/server_context.h>
 
 namespace grpcw {
+namespace server {
 
 /**
  * @brief The function signature for a service's non-streaming calls
@@ -66,4 +67,5 @@ public:
 };
 
 } // namespace detail
+} // namespace server
 } // namespace grpcw

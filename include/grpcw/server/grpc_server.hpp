@@ -20,46 +20,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "grpcw/detail/tag.hpp"
+#pragma once
 
-// standard
-#include <cassert>
-#include <memory>
+#include <grpc++/server.h>
 
 namespace grpcw {
-namespace detail {
+namespace server {
 
-Tag::Tag(void* d, TagLabel l) : data(d), label(l) {}
+class GrpcServer {
+public:
+    explicit GrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address = "");
 
-::std::ostream& operator<<(::std::ostream& os, const Tag& tag) {
-    os << '{' << tag.data << ", ";
+    /**
+     * @brief Blocks until server is shutdown and all rpc calls terminate
+     */
+    void run();
 
-    switch (tag.label) {
+    template <typename TimePoint>
+    void shutdown(const TimePoint& deadline);
+    void shutdown();
 
-    case TagLabel::done:
-        os << "done";
-        break;
+    std::shared_ptr<grpc::Service>& service();
+    const std::shared_ptr<grpc::Service>& service() const;
 
-    case TagLabel::writing:
-        os << "writing";
-        break;
-    }
-    return os << '}';
+    // grpc::Server does not have const methods so a const version is not needed
+    std::unique_ptr<grpc::Server>& server();
+
+private:
+    std::shared_ptr<grpc::Service> service_;
+    std::unique_ptr<grpc::Server> server_;
+};
+
+template <typename TimePoint>
+void GrpcServer::shutdown(const TimePoint& deadline) {
+    server_->Shutdown(deadline);
 }
 
-void* make_tag(void* data, TagLabel label, std::unordered_map<void*, std::unique_ptr<Tag>>* tags) {
-    auto&& tag = std::unique_ptr<Tag>(new Tag(data, label));
-    void* result = tag.get();
-    tags->emplace(result, std::forward<decltype(tag)>(tag));
-    return result;
-}
-
-Tag get_tag(void* key, std::unordered_map<void*, std::unique_ptr<Tag>>* tags) {
-    assert(tags->find(key) != tags->end());
-    Tag tag_copy = *tags->at(key);
-    tags->erase(key);
-    return tag_copy;
-}
-
-} // namespace detail
+} // namespace server
 } // namespace grpcw

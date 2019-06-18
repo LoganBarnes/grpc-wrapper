@@ -27,7 +27,6 @@
 
 namespace grpcw {
 namespace testing {
-namespace util {
 
 class TestService : public protocol::Test::Service {
 public:
@@ -42,6 +41,5 @@ public:
                                      grpc::ServerWriter<protocol::TestMessage>* writer) override;
 };
 
-} // namespace util
 } // namespace testing
 } // namespace grpcw

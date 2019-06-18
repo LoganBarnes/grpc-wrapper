@@ -22,30 +22,44 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-// standard
+// https://stackoverflow.com/a/17902439
+
+#include <cstddef>
 #include <memory>
-#include <ostream>
-#include <unordered_map>
+#include <type_traits>
+#include <utility>
 
 namespace grpcw {
-namespace detail {
+namespace util {
 
-enum class TagLabel {
-    writing,
-    done,
+template <class T>
+struct _Unique_if {
+    typedef std::unique_ptr<T> _Single_object;
 };
 
-struct Tag {
-    void* data;
-    TagLabel label;
-
-    Tag(void* d, TagLabel l);
+template <class T>
+struct _Unique_if<T[]> {
+    typedef std::unique_ptr<T[]> _Unknown_bound;
 };
 
-::std::ostream& operator<<(::std::ostream& os, const Tag& tag);
+template <class T, size_t N>
+struct _Unique_if<T[N]> {
+    typedef void _Known_bound;
+};
 
-void* make_tag(void* data, TagLabel label, std::unordered_map<void*, std::unique_ptr<Tag>>* tags);
-Tag get_tag(void* key, std::unordered_map<void*, std::unique_ptr<Tag>>* tags);
+template <class T, class... Args>
+typename _Unique_if<T>::_Single_object make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
-} // namespace detail
+template <class T>
+typename _Unique_if<T>::_Unknown_bound make_unique(size_t n) {
+    typedef typename std::remove_extent<T>::type U;
+    return std::unique_ptr<T>(new U[n]());
+}
+
+template <class T, class... Args>
+typename _Unique_if<T>::_Known_bound make_unique(Args&&...) = delete;
+
+} // namespace util
 } // namespace grpcw

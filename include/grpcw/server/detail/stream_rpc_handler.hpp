@@ -22,18 +22,20 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "grpcw/detail/async_rpc_handler_interface.hpp"
-#include "grpcw/detail/tag.hpp"
+// grpcw
+#include "grpcw/server/detail/async_rpc_handler_interface.hpp"
+#include "grpcw/server/detail/tag.hpp"
 #include "grpcw/util/atomic_data.hpp"
-#include "grpcw/util/container_util.hpp"
+#include "grpcw/util/make_unique.hpp"
 
+// standard
 #include <atomic>
-#include <experimental/optional>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace grpcw {
+namespace server {
 
 template <typename Response>
 class StreamInterface {
@@ -125,7 +127,7 @@ void StreamRpcHandler<Service, Request, Response, Callback>::activate_next() {
         }
 
         // Add a new connection that is waiting to be activated
-        connections.next = std::make_unique<StreamConnection<Request, Response>>();
+        connections.next = util::make_unique<StreamConnection<Request, Response>>();
 
         connections.next->context.AsyncNotifyWhenDone(
             detail::make_tag(connections.next.get(), TagLabel::done, &connections.tags));
@@ -196,7 +198,7 @@ void StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization
             case TagLabel::done:
                 // If the stream is not being processed then delete it. Otherwise, it will
                 // be deleted when the queue returns this tag because 'call_ok' will be false.
-                if (not util::has_key(connections.processing, tag.data)) {
+                if (connections.processing.find(tag.data) == connections.processing.end()) {
                     connections.active.erase(tag.data);
                     connections.processing.erase(tag.data);
                 }
@@ -212,4 +214,5 @@ void StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization
 }
 
 } // namespace detail
+} // namespace server
 } // namespace grpcw

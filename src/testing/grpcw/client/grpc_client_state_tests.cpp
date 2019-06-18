@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "grpcw/grpc_client_state.hpp"
+#include "grpcw/client/grpc_client_state.hpp"
 
 // third-party
 #include <doctest/doctest.h>
@@ -34,22 +34,22 @@ TEST_CASE("[grpcw] testing the GrpcClientState string functions") {
     std::stringstream ss;
 
     SUBCASE("not_connected_string") {
-        ss << GrpcClientState::not_connected;
+        ss << client::GrpcClientState::not_connected;
         CHECK(ss.str() == "not_connected");
     }
 
     SUBCASE("attempting_to_connect_string") {
-        ss << GrpcClientState::attempting_to_connect;
+        ss << client::GrpcClientState::attempting_to_connect;
         CHECK(ss.str() == "attempting_to_connect");
     }
 
     SUBCASE("connected_string") {
-        ss << GrpcClientState::connected;
+        ss << client::GrpcClientState::connected;
         CHECK(ss.str() == "connected");
     }
 
     SUBCASE("invalid_GrpcClientState_string") {
         // Really have to do some shadily incorrect coding to cause this
-        CHECK_THROWS_AS(ss << static_cast<GrpcClientState>(-1), std::invalid_argument);
+        CHECK_THROWS_AS(ss << static_cast<client::GrpcClientState>(-1), std::invalid_argument);
     }
 }

@@ -22,37 +22,37 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+// grpcw
+#include "grpcw/forward_declarations.hpp"
+
+// third-party
+#include <grpc++/channel.h>
 #include <grpc++/server.h>
 
-namespace grpcw {
+// standard
+#include <memory>
+#include <thread>
 
-class GrpcServer {
+namespace grpcw {
+namespace server {
+
+class ScopedGrpcServer {
 public:
-    explicit GrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address = "");
+    /**
+     * @brief The server will be running when the constructor finishes
+     */
+    explicit ScopedGrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address = "");
+    ~ScopedGrpcServer();
 
     /**
-     * @brief Blocks until server is shutdown and all rpc calls terminate
+     * @brief This can be used to create in-process clients
      */
-    void run();
-
-    template <typename TimePoint>
-    void shutdown(const TimePoint& deadline);
-    void shutdown();
-
-    std::shared_ptr<grpc::Service>& service();
-    const std::shared_ptr<grpc::Service>& service() const;
-
-    // grpc::Server does not have const methods so a const version is not needed
-    std::unique_ptr<grpc::Server>& server();
+    grpc::Server& server();
 
 private:
-    std::shared_ptr<grpc::Service> service_;
-    std::unique_ptr<grpc::Server> server_;
+    std::unique_ptr<GrpcServer> server_;
+    std::thread run_thread_;
 };
 
-template <typename TimePoint>
-void GrpcServer::shutdown(const TimePoint& deadline) {
-    server_->Shutdown(deadline);
-}
-
+} // namespace server
 } // namespace grpcw

@@ -20,34 +20,54 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#pragma once
+#include "test_service.hpp"
 
 // grpcw
-#include "grpcw/grpc_server.hpp"
-
-// thirdparty
-#include <grpc++/channel.h>
-
-// standard
-#include <memory>
-#include <thread>
+#include "testing/test_proto_util.hpp"
 
 namespace grpcw {
 namespace testing {
-namespace util {
 
-class TestServer {
-public:
-    explicit TestServer(const std::string& server_address = "");
-    ~TestServer();
+TestService::TestService() : protocol::Test::Service() {}
+TestService::~TestService() = default;
 
-    std::shared_ptr<grpc::Channel> inprocess_channel();
+grpc::Status TestService::echo(grpc::ServerContext* /*context*/,
+                               const protocol::TestMessage* request,
+                               protocol::TestMessage* response) {
+    response->CopyFrom(*request);
+    return grpc::Status::OK;
+}
 
-private:
-    std::unique_ptr<GrpcServer> server_;
-    std::thread run_thread_;
-};
+grpc::Status TestService::endless_echo_stream(grpc::ServerContext* context,
+                                              const protocol::TestMessage* request,
+                                              grpc::ServerWriter<protocol::TestMessage>* writer) {
+    while (writer->Write(*request)) {
+        if (context->IsCancelled()) {
+            return grpc::Status::CANCELLED;
+        }
+    }
+    return grpc::Status::OK;
+}
 
-} // namespace util
 } // namespace testing
 } // namespace grpcw
+
+// third-party
+#include <doctest/doctest.h>
+
+using namespace grpcw;
+
+TEST_CASE("[grpcw-test-util] echo_service_echos") {
+    const std::string message = "01234aBcDeFgHiJkLmNoPqRsTuVwXyZ56789";
+
+    testing::TestService service;
+
+    testing::protocol::TestMessage request, response;
+    request.set_msg(message);
+
+    grpc::ServerContext context;
+    service.echo(&context, &request, &response);
+
+    CHECK(request.msg() == message); // request is unchanged
+    CHECK(response == request); // response is an exact copy of request
+}

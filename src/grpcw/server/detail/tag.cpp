@@ -20,48 +20,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "grpcw/grpc_server.hpp"
-
-// third-party
-#include <grpc++/server_builder.h>
+#include "grpcw/server/detail/tag.hpp"
 
 // standard
-#include <utility>
+#include <cassert>
+#include <memory>
 
 namespace grpcw {
+namespace server {
+namespace detail {
 
-GrpcServer::GrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address)
-    : service_(std::move(service)) {
+Tag::Tag(void* d, TagLabel l) : data(d), label(l) {}
 
-    grpc::ServerBuilder builder;
-    builder.RegisterService(service_.get());
-    builder.SetMaxMessageSize(std::numeric_limits<int>::max());
+::std::ostream& operator<<(::std::ostream& os, const Tag& tag) {
+    os << '{' << tag.data << ", ";
 
-    if (not server_address.empty()) {
-        builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    switch (tag.label) {
+
+    case TagLabel::done:
+        os << "done";
+        break;
+
+    case TagLabel::writing:
+        os << "writing";
+        break;
     }
-
-    server_ = builder.BuildAndStart();
+    return os << '}';
 }
 
-void GrpcServer::run() {
-    server_->Wait();
+void* make_tag(void* data, TagLabel label, std::unordered_map<void*, std::unique_ptr<Tag>>* tags) {
+    auto&& tag = std::unique_ptr<Tag>(new Tag(data, label));
+    void* result = tag.get();
+    tags->emplace(result, std::forward<decltype(tag)>(tag));
+    return result;
 }
 
-void GrpcServer::shutdown() {
-    server_->Shutdown();
+Tag get_tag(void* key, std::unordered_map<void*, std::unique_ptr<Tag>>* tags) {
+    assert(tags->find(key) != tags->end());
+    Tag tag_copy = *tags->at(key);
+    tags->erase(key);
+    return tag_copy;
 }
 
-std::shared_ptr<grpc::Service>& GrpcServer::service() {
-    return service_;
-}
-
-const std::shared_ptr<grpc::Service>& GrpcServer::service() const {
-    return service_;
-}
-
-std::unique_ptr<grpc::Server>& GrpcServer::server() {
-    return server_;
-}
-
+} // namespace detail
+} // namespace server
 } // namespace grpcw

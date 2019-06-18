@@ -22,32 +22,24 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-// standard
-#include <stdexcept>
-#include <string>
-
 namespace grpcw {
+namespace server {
 
-enum class GrpcClientState {
-    not_connected,
-    attempting_to_connect,
-    connected,
-};
+class GrpcServer;
 
-inline std::string to_string(const GrpcClientState& state) {
-    switch (state) {
-    case GrpcClientState::not_connected:
-        return "not_connected";
-    case GrpcClientState::attempting_to_connect:
-        return "attempting_to_connect";
-    case GrpcClientState::connected:
-        return "connected";
-    }
-    throw std::invalid_argument("Invalid GrpcClientState");
 }
 
-inline ::std::ostream& operator<<(::std::ostream& os, const GrpcClientState& state) {
-    return os << to_string(state);
-}
+namespace client {
+
+template <typename Service>
+class GrpcClient;
+
+template <typename Service>
+class GrpcClientStreamInterface;
+
+template <typename Service, typename Return, typename InitFunc, typename Callback>
+class GrpcClientStream;
+
+} // namespace client
 
 } // namespace grpcw

@@ -29,6 +29,7 @@
 #include <thread>
 
 namespace grpcw {
+namespace client {
 
 template <typename Service>
 class GrpcClientStreamInterface {
@@ -102,4 +103,5 @@ bool GrpcClientStream<Service, Return, InitFunc, Callback>::streaming() {
     return context_ != nullptr;
 }
 
+} // namespace client
 } // namespace grpcw

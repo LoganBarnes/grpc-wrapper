@@ -123,7 +123,7 @@ if (${GRPCW_BUILD_TESTS})
             ${CMAKE_CURRENT_LIST_DIR}/src/testing/*
             )
 
-    add_executable(grpc-wrapper-tests ${TEST_SOURCE_FILES})
+    add_executable(grpc-wrapper-tests ${TEST_SOURCE_FILES} src/testing/main.cpp)
 
     target_link_libraries(grpc-wrapper-tests
             PRIVATE grpc-wrapper

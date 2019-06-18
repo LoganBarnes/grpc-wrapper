@@ -22,22 +22,19 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "grpcw/detail/async_rpc_handler_interface.hpp"
-#include "grpcw/detail/stream_rpc_handler.hpp"
-#include "grpcw/detail/tag.hpp"
+#include "grpcw/server/detail/async_rpc_handler_interface.hpp"
+#include "grpcw/server/detail/stream_rpc_handler.hpp"
+#include "grpcw/server/detail/tag.hpp"
 #include "grpcw/util/atomic_data.hpp"
+#include "grpcw/util/make_unique.hpp"
 
-#include <experimental/optional>
+// standard
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-#include <testing/testing.grpc.pb.h>
-#endif
-
 namespace grpcw {
-
+namespace server {
 namespace detail {
 
 /**
@@ -97,15 +94,6 @@ NonStreamRpcHandler<Service, Request, Response, Callback>::NonStreamRpcHandler(
     activate_next();
 }
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[grpcw] tests NonStreamRpcConnection") {
-    using namespace grpcw::test::proto;
-    //    std::unique_ptr<AsyncRpcHandlerInterface> rpc_handle;
-    // TODO: Make/use a test server
-    //    rpc_handle = std::make_unique<NonStreamRpcHandler<Test::Service, TestMessage, TestMessage>>()
-}
-#endif
-
 template <typename Service, typename Request, typename Response, typename Callback>
 NonStreamRpcHandler<Service, Request, Response, Callback>::~NonStreamRpcHandler() {
     queue_.Shutdown();
@@ -136,7 +124,7 @@ void NonStreamRpcHandler<Service, Request, Response, Callback>::activate_next() 
     }
 
     // Add a new connection that is waiting to be activated
-    connection_ = std::make_unique<NonStreamRpcConnection<Request, Response>>();
+    connection_ = util::make_unique<NonStreamRpcConnection<Request, Response>>();
 
     (service_.*stream_func_)(&connection_->context,
                              &connection_->request,
@@ -147,4 +135,5 @@ void NonStreamRpcHandler<Service, Request, Response, Callback>::activate_next() 
 }
 
 } // namespace detail
+} // namespace server
 } // namespace grpcw
