@@ -26,6 +26,7 @@ project(gRPC-Wrapper LANGUAGES CXX)
 option(GRPCW_BUILD_TESTS "Build unit tests" OFF)
 option(GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
 option(GRPCW_USE_DEV_FLAGS "Compile with all the flags" OFF)
+option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been found by CMake" OFF)
 
 #############################
 ### Project Configuration ###
@@ -74,8 +75,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(gRPC REQUIRED)
+
+if (NOT ${GRPCW_SKIP_PACKAGE_FINDING})
+    find_package(Protobuf REQUIRED)
+    find_package(gRPC REQUIRED)
+endif ()
 
 add_subdirectory(third-party)
 
