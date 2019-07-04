@@ -20,9 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-# search directory for protobuf (still needed?)
-#set(PROTOBUF_IMPORT_DIRS ${CMAKE_CURRENT_LIST_DIR})
-
 function(create_proto_library target_name proto_dir cpp_output_dir)
     # make the output directory
     file(MAKE_DIRECTORY ${cpp_output_dir})
@@ -39,12 +36,7 @@ function(create_proto_library target_name proto_dir cpp_output_dir)
     grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${cpp_output_dir} ${PROTO_FILES})
 
     add_library(${target_name} ${PROTO_HDRS} ${PROTO_SRCS} ${GRPC_HDRS} ${GRPC_SRCS})
-    target_link_libraries(${target_name}
-            PUBLIC protobuf::libprotobuf
-            PUBLIC gRPC::grpc++
-            PUBLIC ${CMAKE_DL_LIBS}
-            PUBLIC Threads::Threads
-            )
+    target_link_libraries(${target_name} PUBLIC grpc-wrapper)
     target_include_directories(${target_name} SYSTEM PUBLIC ${cpp_output_dir})
 endfunction()
 
