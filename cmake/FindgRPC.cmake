@@ -61,9 +61,9 @@ function(GRPC_GENERATE_CPP SRCS HDRS DEST)
         add_custom_command(
                 OUTPUT "${DEST}/${FIL_WE}.grpc.pb.cc"
                 "${DEST}/${FIL_WE}.grpc.pb.h"
-                COMMAND protobuf::protoc
+                COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
                 ARGS --grpc_out ${DEST} ${_protobuf_include_path} --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN} ${ABS_FIL}
-                DEPENDS ${ABS_FIL} protobuf::protoc gRPC::grpc_cpp_plugin
+                DEPENDS ${ABS_FIL} ${PROTOBUF_PROTOC_EXECUTABLE} ${GRPC_CPP_PLUGIN}
                 COMMENT "Running C++ gRPC compiler on ${FIL}"
                 VERBATIM)
     endforeach ()
@@ -86,7 +86,7 @@ mark_as_advanced(GRPC_INCLUDE_DIR)
 # Find gRPC library
 find_library(GRPC_LIBRARY NAMES grpc)
 mark_as_advanced(GRPC_LIBRARY)
-add_library(gRPC::grpc UNKNOWN IMPORTED GLOBAL)
+add_library(gRPC::grpc UNKNOWN IMPORTED)
 set_target_properties(gRPC::grpc PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${GRPC_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES "-lpthread;-ldl"
@@ -96,7 +96,7 @@ set_target_properties(gRPC::grpc PROPERTIES
 # Find gRPC C++ library
 find_library(GRPC_GRPC++_LIBRARY NAMES grpc++)
 mark_as_advanced(GRPC_GRPC++_LIBRARY)
-add_library(gRPC::grpc++ UNKNOWN IMPORTED GLOBAL)
+add_library(gRPC::grpc++ UNKNOWN IMPORTED)
 set_target_properties(gRPC::grpc++ PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${GRPC_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES gRPC::grpc
@@ -106,7 +106,7 @@ set_target_properties(gRPC::grpc++ PROPERTIES
 # Find gRPC C++ reflection library
 find_library(GRPC_GRPC++_REFLECTION_LIBRARY NAMES grpc++_reflection)
 mark_as_advanced(GRPC_GRPC++_REFLECTION_LIBRARY)
-add_library(gRPC::grpc++_reflection UNKNOWN IMPORTED GLOBAL)
+add_library(gRPC::grpc++_reflection UNKNOWN IMPORTED)
 set_target_properties(gRPC::grpc++_reflection PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${GRPC_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES gRPC::grpc++
