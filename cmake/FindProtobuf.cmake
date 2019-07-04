@@ -86,7 +86,7 @@ mark_as_advanced(PROTOBUF_INCLUDE_DIR)
 # The Protobuf library
 find_library(PROTOBUF_LIBRARY NAMES protobuf)
 mark_as_advanced(PROTOBUF_LIBRARY)
-add_library(protobuf::libprotobuf UNKNOWN IMPORTED)
+add_library(protobuf::libprotobuf UNKNOWN IMPORTED GLOBAL)
 set_target_properties(protobuf::libprotobuf PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${PROTOBUF_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES pthread
@@ -96,7 +96,7 @@ set_target_properties(protobuf::libprotobuf PROPERTIES
 # The Protobuf lite library
 find_library(PROTOBUF_LITE_LIBRARY NAMES protobuf-lite)
 mark_as_advanced(PROTOBUF_LITE_LIBRARY)
-add_library(protobuf::libprotobuf-lite UNKNOWN IMPORTED)
+add_library(protobuf::libprotobuf-lite UNKNOWN IMPORTED GLOBAL)
 set_target_properties(protobuf::libprotobuf-lite PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${PROTOBUF_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES pthread
@@ -106,7 +106,7 @@ set_target_properties(protobuf::libprotobuf-lite PROPERTIES
 # The Protobuf Protoc Library
 find_library(PROTOBUF_PROTOC_LIBRARY NAMES protoc)
 mark_as_advanced(PROTOBUF_PROTOC_LIBRARY)
-add_library(protobuf::libprotoc UNKNOWN IMPORTED)
+add_library(protobuf::libprotoc UNKNOWN IMPORTED GLOBAL)
 set_target_properties(protobuf::libprotoc PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES ${PROTOBUF_INCLUDE_DIR}
         INTERFACE_LINK_LIBRARIES protobuf::libprotobuf
