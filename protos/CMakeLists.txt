@@ -21,6 +21,14 @@
 # SOFTWARE.
 ##########################################################################################
 function(create_proto_library target_name proto_dir cpp_output_dir)
+
+    if (NOT DEFINED PROTOBUF_GENERATE_CPP_APPEND_PATH)
+        set(PROTOBUF_GENERATE_CPP_APPEND_PATH TRUE)
+    endif ()
+    if (NOT DEFINED GRPC_GENERATE_CPP_APPEND_PATH)
+        set(GRPC_GENERATE_CPP_APPEND_PATH TRUE)
+    endif ()
+
     # make the output directory
     file(MAKE_DIRECTORY ${cpp_output_dir})
 
