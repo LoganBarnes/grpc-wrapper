@@ -54,6 +54,8 @@ endif ()
 # helps to fix that and it is super useful when refactoring
 cmake_policy(SET CMP0009 NEW)
 
+get_directory_property(GRPCW_HAS_PARENT PARENT_DIRECTORY)
+
 ##################
 ### Clang-Tidy ###
 ##################
@@ -95,10 +97,17 @@ file(GLOB_RECURSE SOURCE_FILES
 
 add_library(grpc-wrapper ${SOURCE_FILES})
 
-target_include_directories(grpc-wrapper
-        PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
-        PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
-        )
+if (GRPCW_HAS_PARENT)
+    target_include_directories(grpc-wrapper SYSTEM
+            PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
+            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
+            )
+else ()
+    target_include_directories(grpc-wrapper
+            PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
+            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
+            )
+endif ()
 
 target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS})
 
