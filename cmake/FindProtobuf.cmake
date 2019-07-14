@@ -61,9 +61,9 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS DEST)
         add_custom_command(
                 OUTPUT "${DEST}/${FIL_WE}.pb.cc"
                 "${DEST}/${FIL_WE}.pb.h"
-                COMMAND protobuf::protoc
+                COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
                 ARGS --cpp_out ${DEST} ${_protobuf_include_path} ${ABS_FIL}
-                DEPENDS ${ABS_FIL} protobuf::protoc
+                DEPENDS ${ABS_FIL} ${PROTOBUF_PROTOC_EXECUTABLE}
                 COMMENT "Running C++ protocol buffer compiler on ${FIL}"
                 VERBATIM)
     endforeach ()

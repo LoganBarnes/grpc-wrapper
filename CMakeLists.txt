@@ -109,6 +109,13 @@ else ()
             )
 endif ()
 
+target_link_libraries(grpc-wrapper
+        PUBLIC protobuf::libprotobuf
+        PUBLIC gRPC::grpc++
+        PUBLIC ${CMAKE_DL_LIBS}
+        PUBLIC Threads::Threads
+        )
+
 target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS})
 
 set_target_properties(
@@ -124,13 +131,13 @@ set_target_properties(
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
 
+add_subdirectory(protos)
+
 ###############
 ### Testing ###
 ###############
-if (${GRPCW_BUILD_TESTS})
-    ### Protobuf Generation ###
-    add_subdirectory(protos)
 
+if (${GRPCW_BUILD_TESTS})
     file(GLOB_RECURSE TEST_SOURCE_FILES
             LIST_DIRECTORIES false
             CONFIGURE_DEPENDS
