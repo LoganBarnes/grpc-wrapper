@@ -58,13 +58,14 @@ struct StreamConnection {
     StreamConnection() : responder(&context) {}
 };
 
-template <typename Service, typename Request, typename Response, typename Callback>
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
 class StreamRpcHandler : public AsyncRpcHandlerInterface, public StreamInterface<Response> {
 public:
     explicit StreamRpcHandler(Service& service,
                               grpc::ServerCompletionQueue& server_queue,
                               AsyncServerStreamFunc<Service, Request, Response> stream_func,
-                              Callback callback);
+                              Callback callback,
+                              DeletionCallback deletion_callback);
 
     ~StreamRpcHandler() override;
 
@@ -79,6 +80,7 @@ private:
     grpc::ServerCompletionQueue& server_queue_;
     AsyncServerStreamFunc<Service, Request, Response> stream_func_;
     Callback callback_;
+    DeletionCallback deletion_callback_;
 
     struct Connections {
         std::unique_ptr<StreamConnection<Request, Response>> next = nullptr;
@@ -96,27 +98,34 @@ private:
     void run_synchronization();
 };
 
-template <typename Service, typename Request, typename Response, typename Callback>
-StreamRpcHandler<Service, Request, Response, Callback>::StreamRpcHandler(
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::StreamRpcHandler(
     Service& service,
     grpc::ServerCompletionQueue& server_queue,
     AsyncServerStreamFunc<Service, Request, Response> stream_func,
-    Callback callback)
-    : service_(service), server_queue_(server_queue), stream_func_(stream_func), callback_(std::move(callback)) {
+    Callback callback,
+    DeletionCallback deletion_callback)
+    : service_(service),
+      server_queue_(server_queue),
+      stream_func_(stream_func),
+      callback_(std::move(callback)),
+      deletion_callback_(std::move(deletion_callback)) {
 
-    sync_thread_ = std::thread(&StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization, this);
+    sync_thread_
+        = std::thread(&StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::run_synchronization,
+                      this);
 
     activate_next();
 }
 
-template <typename Service, typename Request, typename Response, typename Callback>
-StreamRpcHandler<Service, Request, Response, Callback>::~StreamRpcHandler() {
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::~StreamRpcHandler() {
     queue_.Shutdown();
     sync_thread_.join();
 }
 
-template <typename Service, typename Request, typename Response, typename Callback>
-void StreamRpcHandler<Service, Request, Response, Callback>::activate_next() {
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::activate_next() {
     connections_.use_safely([this](Connections& connections) {
         if (connections.next) {
             callback_(connections.next->request);
@@ -141,8 +150,8 @@ void StreamRpcHandler<Service, Request, Response, Callback>::activate_next() {
     });
 }
 
-template <typename Service, typename Request, typename Response, typename Callback>
-bool StreamRpcHandler<Service, Request, Response, Callback>::write(const Response& update) {
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+bool StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::write(const Response& update) {
 
     auto previous_updates_processed = [](const Connections& connections) { return connections.processing.empty(); };
 
@@ -169,8 +178,8 @@ bool StreamRpcHandler<Service, Request, Response, Callback>::write(const Respons
     return true;
 }
 
-template <typename Service, typename Request, typename Response, typename Callback>
-void StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization() {
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::run_synchronization() {
 
     void* recv_tag;
     bool call_ok;
@@ -189,6 +198,7 @@ void StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization
 
                 // Remove the stream if it is finished
                 if (not call_ok) {
+                    deletion_callback_(static_cast<StreamConnection<Request, Response>*>(tag.data)->request);
                     connections.active.erase(tag.data);
                 }
 
@@ -199,8 +209,8 @@ void StreamRpcHandler<Service, Request, Response, Callback>::run_synchronization
                 // If the stream is not being processed then delete it. Otherwise, it will
                 // be deleted when the queue returns this tag because 'call_ok' will be false.
                 if (connections.processing.find(tag.data) == connections.processing.end()) {
+                    deletion_callback_(static_cast<StreamConnection<Request, Response>*>(tag.data)->request);
                     connections.active.erase(tag.data);
-                    connections.processing.erase(tag.data);
                 }
                 break;
             }
