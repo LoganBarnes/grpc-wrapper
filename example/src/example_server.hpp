@@ -25,6 +25,9 @@
 // grpcw
 #include "grpcw/forward_declarations.hpp"
 
+// third-party
+#include <grpc++/server.h>
+
 // generated
 #include <example.grpc.pb.h>
 

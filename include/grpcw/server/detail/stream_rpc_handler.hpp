@@ -42,12 +42,23 @@ class StreamInterface {
 public:
     virtual ~StreamInterface() = 0;
     virtual bool write(const Response& update) = 0;
+    virtual bool write(const Response& update, void* client) = 0;
 };
 
 template <typename Response>
 StreamInterface<Response>::~StreamInterface() = default;
 
 namespace detail {
+
+template <typename Callback, typename Arg>
+auto invoke_callback(int, const Callback& callback, const Arg& arg, void* client) -> decltype(callback(arg, client)) {
+    return callback(arg, client);
+}
+
+template <typename Callback, typename Arg>
+auto invoke_callback(long, const Callback& callback, const Arg& arg, void * /*client*/) -> decltype(callback(arg)) {
+    return callback(arg);
+}
 
 template <typename Request, typename Response>
 struct StreamConnection {
@@ -74,6 +85,7 @@ public:
      */
     void activate_next() override;
     bool write(const Response& update) override;
+    bool write(const Response& update, void* client) override;
 
 private:
     Service& service_;
@@ -128,9 +140,11 @@ template <typename Service, typename Request, typename Response, typename Callba
 void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::activate_next() {
     connections_.use_safely([this](Connections& connections) {
         if (connections.next) {
-            callback_(connections.next->request);
-            // 'next' is now an active connection
             void* key = connections.next.get();
+
+            invoke_callback(0, callback_, connections.next->request, key);
+
+            // 'next' is now an active connection
             connections.active.emplace(key, std::move(connections.next));
             connections.next = nullptr; // just in case because the data was moved
         }
@@ -152,22 +166,39 @@ void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::a
 
 template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
 bool StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::write(const Response& update) {
+    return write(update, nullptr);
+}
+template <typename Service, typename Request, typename Response, typename Callback, typename DeletionCallback>
+bool StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::write(const Response& update,
+                                                                                     void* client) {
 
     auto previous_updates_processed = [](const Connections& connections) { return connections.processing.empty(); };
 
     bool notify;
+    bool result = true;
 
     // Wait until all previous updates have finished processing
     connections_.wait_to_use_safely(previous_updates_processed, [&](Connections& connections) {
         notify = connections.active.empty();
 
-        // Write the update to all active streams
-        for (auto& active_pair : connections.active) {
-            void* key = active_pair.first;
-            std::unique_ptr<StreamConnection<Request, Response>>& connection = active_pair.second;
+        if (client) {
+            if (connections.active.find(client) != connections.active.end()) {
+                std::unique_ptr<StreamConnection<Request, Response>>& connection = connections.active.at(client);
 
-            connection->responder.Write(update, detail::make_tag(key, TagLabel::writing, &connections.tags));
-            connections.processing.emplace(key); // mark as being processed
+                connection->responder.Write(update, detail::make_tag(client, TagLabel::writing, &connections.tags));
+                connections.processing.emplace(client); // mark as being processed
+            } else {
+                result = false;
+            }
+        } else {
+            // Write the update to all active streams
+            for (auto& active_pair : connections.active) {
+                void* key = active_pair.first;
+                std::unique_ptr<StreamConnection<Request, Response>>& connection = active_pair.second;
+
+                connection->responder.Write(update, detail::make_tag(key, TagLabel::writing, &connections.tags));
+                connections.processing.emplace(key); // mark as being processed
+            }
         }
     });
 
@@ -198,7 +229,11 @@ void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::r
 
                 // Remove the stream if it is finished
                 if (not call_ok) {
-                    deletion_callback_(static_cast<StreamConnection<Request, Response>*>(tag.data)->request);
+
+                    invoke_callback(0,
+                                    deletion_callback_,
+                                    static_cast<StreamConnection<Request, Response>*>(tag.data)->request,
+                                    tag.data);
                     connections.active.erase(tag.data);
                 }
 
@@ -209,7 +244,10 @@ void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::r
                 // If the stream is not being processed then delete it. Otherwise, it will
                 // be deleted when the queue returns this tag because 'call_ok' will be false.
                 if (connections.processing.find(tag.data) == connections.processing.end()) {
-                    deletion_callback_(static_cast<StreamConnection<Request, Response>*>(tag.data)->request);
+                    invoke_callback(0,
+                                    deletion_callback_,
+                                    static_cast<StreamConnection<Request, Response>*>(tag.data)->request,
+                                    tag.data);
                     connections.active.erase(tag.data);
                 }
                 break;
