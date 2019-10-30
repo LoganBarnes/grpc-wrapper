@@ -37,8 +37,6 @@
 namespace grpcw {
 namespace server {
 
-using ClientID = void*;
-
 template <typename Response>
 class StreamInterface {
 public:

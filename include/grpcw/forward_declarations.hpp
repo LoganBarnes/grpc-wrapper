@@ -25,6 +25,8 @@
 namespace grpcw {
 namespace server {
 
+using ClientID = void*;
+
 class GrpcServer;
 
 template <typename Service>
