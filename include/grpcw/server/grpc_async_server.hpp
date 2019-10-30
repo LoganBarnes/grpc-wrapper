@@ -40,6 +40,10 @@ using DefaultStreamCallback = void (*)(const Request&);
 
 template <typename Service>
 class GrpcAsyncServer {
+
+    template <typename BaseService, typename Request, typename Response>
+    class StreamRpcHandlerCallbackSetter;
+
 public:
     explicit GrpcAsyncServer(std::shared_ptr<Service> service, const std::string& address);
     ~GrpcAsyncServer();
@@ -50,15 +54,9 @@ public:
     /**
      * @brief StreamInterface* should stop being used before GrpcAsyncServer is destroyed
      */
-    template <typename BaseService,
-              typename Request,
-              typename Response,
-              typename Callback,
-              typename DeletionCallback = DefaultStreamCallback<Request>>
-    StreamInterface<Response>* register_async_stream(
-        AsyncServerStreamFunc<BaseService, Request, Response> stream_func,
-        Callback&& callback,
-        DeletionCallback&& deletion_callback = [](const Request&) {});
+    template <typename BaseService, typename Request, typename Response>
+    StreamRpcHandlerCallbackSetter<BaseService, Request, Response>
+    register_async_stream(AsyncServerStreamFunc<BaseService, Request, Response> stream_func);
 
     grpc::Server& server();
 
@@ -71,6 +69,42 @@ private:
     util::AtomicData<RpcMap> rpc_handlers_;
 
     std::thread run_thread_;
+
+    /// \brief Allows callbacks to be set for `GrpcClientStream`s
+    /// \tparam Result is the stream's result type
+    template <typename BaseService, typename Request, typename Response>
+    class StreamRpcHandlerCallbackSetter {
+
+        using StreamConnectionCallback =
+            typename detail::StreamRpcHandler<BaseService, Request, Response>::ConnectionCallback;
+        using StreamDeletionCallback =
+            typename detail::StreamRpcHandler<BaseService, Request, Response>::DeletionCallback;
+
+    public:
+        // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+        StreamRpcHandlerCallbackSetter(detail::StreamRpcHandler<BaseService, Request, Response>* stream)
+            : stream_(stream) {}
+
+        /// \brief Set the ConnectionCallback function for this stream
+        StreamRpcHandlerCallbackSetter<BaseService, Request, Response>&
+        on_connect(StreamConnectionCallback connection_callback) {
+            stream_->on_connect(stream_, std::move(connection_callback));
+            return *this;
+        }
+
+        /// \brief Set the DeletionCallback function for this stream
+        StreamRpcHandlerCallbackSetter<BaseService, Request, Response>&
+        on_delete(StreamDeletionCallback deletion_callback) {
+            stream_->on_delete(stream_, std::move(deletion_callback));
+            return *this;
+        }
+
+        /// \brief Return the stream used to send updates to the clients
+        StreamInterface<Response>* stream() { return stream_; }
+
+    private:
+        detail::StreamRpcHandler<BaseService, Request, Response>* stream_;
+    };
 };
 
 template <typename Service>
@@ -122,25 +156,18 @@ void GrpcAsyncServer<Service>::register_async(AsyncNoStreamFunc<BaseService, Req
 }
 
 template <typename Service>
-template <typename BaseService, typename Request, typename Response, typename Callback, typename DeletionCallback>
-StreamInterface<Response>*
-GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseService, Request, Response> stream_func,
-                                                Callback&& callback,
-                                                DeletionCallback&& deletion_callback) {
+template <typename BaseService, typename Request, typename Response>
+auto GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseService, Request, Response> stream_func)
+    -> StreamRpcHandlerCallbackSetter<BaseService, Request, Response> {
+
     static_assert(std::is_base_of<BaseService, Service>::value, "BaseService must be a base class of Service");
-    auto handler = std::make_unique<
-        detail::StreamRpcHandler<BaseService, Request, Response, Callback, DeletionCallback>>(*service_,
+    auto handler = std::make_unique<detail::StreamRpcHandler<BaseService, Request, Response>>(*service_,
                                                                                               *server_queue_,
-                                                                                              stream_func,
-                                                                                              std::forward<Callback>(
-                                                                                                  callback),
-                                                                                              std::forward<
-                                                                                                  DeletionCallback>(
-                                                                                                  deletion_callback));
+                                                                                              stream_func);
 
     auto* tag = handler.get();
     rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
-    return tag;
+    return {tag};
 }
 
 template <typename Service>

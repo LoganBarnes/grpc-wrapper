@@ -126,7 +126,7 @@ int main(int argc, const char* argv[]) {
         }
 
         if (!time_string.empty()) {
-            std::cout << "Time now: " << time_string << std::endl;
+            std::cout << "Server time now: " << time_string << std::endl;
         }
 
         std::cin >> input;

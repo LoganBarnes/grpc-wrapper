@@ -9,5 +9,5 @@ function build_and_run {
 }
 
 build_and_run cmake-build-debug Debug
-cmake -E chdir cmake-build-debug cmake --build . --target grpc-wrapper-coverage --parallel
+cmake -E chdir cmake-build-debug cmake --build . --target grpc-wrapper-tests-coverage --parallel
 build_and_run cmake-build-release Release

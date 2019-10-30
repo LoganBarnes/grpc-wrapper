@@ -56,8 +56,7 @@ ExampleServer::ExampleServer(const std::string& server_address)
     /*
      * Streaming calls
      */
-    time_stream_ = server_->register_async_stream(&Service::RequestGetServerTimeUpdates,
-                                                  [](const google::protobuf::Empty& /*ignored*/) {});
+    time_stream_ = server_->register_async_stream(&Service::RequestGetServerTimeUpdates).stream();
 
     /*
      * Getters for current state
@@ -102,13 +101,13 @@ grpc::Status ExampleServer::get_time(const protocol::FormatRequest& request, pro
         make_pretty_time_string(ss, time_since_server_start);
         break;
     case protocol::HOURS:
-        ss << std::chrono::duration_cast<std::chrono::hours>(time_since_server_start).count();
+        ss << std::chrono::duration_cast<std::chrono::hours>(time_since_server_start).count() << "h";
         break;
     case protocol::MINUTES:
-        ss << std::chrono::duration_cast<std::chrono::minutes>(time_since_server_start).count();
+        ss << std::chrono::duration_cast<std::chrono::minutes>(time_since_server_start).count() << "m";
         break;
     case protocol::SECONDS:
-        ss << std::chrono::duration_cast<std::chrono::seconds>(time_since_server_start).count();
+        ss << std::chrono::duration_cast<std::chrono::seconds>(time_since_server_start).count() << "s";
         break;
 
     // We can safely ignore these?
