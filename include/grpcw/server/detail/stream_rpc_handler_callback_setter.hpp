@@ -57,8 +57,9 @@ private:
 };
 
 template <typename BaseService, typename Request, typename Response>
-StreamRpcHandlerCallbackSetter<BaseService, Request, Response>
-StreamRpcHandlerCallbackSetter(detail::StreamRpcHandler<BaseService, Request, Response>* stream) : stream_(stream) {}
+StreamRpcHandlerCallbackSetter<BaseService, Request, Response>::StreamRpcHandlerCallbackSetter(
+    detail::StreamRpcHandler<BaseService, Request, Response>* stream)
+    : stream_(stream) {}
 
 template <typename BaseService, typename Request, typename Response>
 StreamRpcHandlerCallbackSetter<BaseService, Request, Response>&
