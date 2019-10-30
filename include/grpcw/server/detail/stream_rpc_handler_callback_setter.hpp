@@ -65,14 +65,14 @@ template <typename BaseService, typename Request, typename Response>
 StreamRpcHandlerCallbackSetter<BaseService, Request, Response>&
 StreamRpcHandlerCallbackSetter<BaseService, Request, Response>::on_connect(
     StreamConnectionCallback connection_callback) {
-    stream_->on_connect(stream_, std::move(connection_callback));
+    stream_->on_connect(std::move(connection_callback));
     return *this;
 }
 
 template <typename BaseService, typename Request, typename Response>
 StreamRpcHandlerCallbackSetter<BaseService, Request, Response>&
 StreamRpcHandlerCallbackSetter<BaseService, Request, Response>::on_delete(StreamDeletionCallback deletion_callback) {
-    stream_->on_delete(stream_, std::move(deletion_callback));
+    stream_->on_delete(std::move(deletion_callback));
     return *this;
 }
 
