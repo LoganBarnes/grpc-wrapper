@@ -44,6 +44,8 @@ public:
     virtual ~StreamInterface() = 0;
     virtual bool write(const Response& update) = 0;
     virtual bool write(const Response& update, ClientID client) = 0;
+    virtual bool finish(const grpc::Status& status) = 0;
+    virtual bool finish(const grpc::Status& status, ClientID client) = 0;
 };
 
 template <typename Response>
@@ -81,6 +83,8 @@ public:
     void activate_next() override;
     bool write(const Response& update) override;
     bool write(const Response& update, ClientID client) override;
+    bool finish(const grpc::Status& status) override;
+    bool finish(const grpc::Status& status, ClientID client) override;
 
 private:
     Service& service_;
@@ -171,6 +175,7 @@ template <typename Service, typename Request, typename Response>
 bool StreamRpcHandler<Service, Request, Response>::write(const Response& update) {
     return write(update, nullptr);
 }
+
 template <typename Service, typename Request, typename Response>
 bool StreamRpcHandler<Service, Request, Response>::write(const Response& update, ClientID client) {
 
@@ -199,6 +204,51 @@ bool StreamRpcHandler<Service, Request, Response>::write(const Response& update,
                 std::unique_ptr<StreamConnection<Request, Response>>& connection = active_pair.second;
 
                 connection->responder.Write(update, detail::make_tag(key, TagLabel::writing, &connections.tags));
+                connections.processing.emplace(key); // mark as being processed
+            }
+        }
+    });
+
+    if (notify) {
+        connections_.notify_one();
+    }
+
+    return true;
+}
+
+template <typename Service, typename Request, typename Response>
+bool StreamRpcHandler<Service, Request, Response>::finish(const grpc::Status& status) {
+    return finish(status, nullptr);
+}
+
+template <typename Service, typename Request, typename Response>
+bool StreamRpcHandler<Service, Request, Response>::finish(const grpc::Status& status, ClientID client) {
+
+    auto previous_updates_processed = [](const Connections& connections) { return connections.processing.empty(); };
+
+    bool notify;
+    bool result = true;
+
+    // Wait until all previous updates have finished processing
+    connections_.wait_to_use_safely(previous_updates_processed, [&](Connections& connections) {
+        notify = connections.active.empty();
+
+        if (client) {
+            if (connections.active.find(client) != connections.active.end()) {
+                std::unique_ptr<StreamConnection<Request, Response>>& connection = connections.active.at(client);
+
+                connection->responder.Finish(status, detail::make_tag(client, TagLabel::writing, &connections.tags));
+                connections.processing.emplace(client); // mark as being processed
+            } else {
+                result = false;
+            }
+        } else {
+            // Write the update to all active streams
+            for (auto& active_pair : connections.active) {
+                void* key = active_pair.first;
+                std::unique_ptr<StreamConnection<Request, Response>>& connection = active_pair.second;
+
+                connection->responder.Finish(status, detail::make_tag(key, TagLabel::writing, &connections.tags));
                 connections.processing.emplace(key); // mark as being processed
             }
         }
