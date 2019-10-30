@@ -23,6 +23,7 @@
 #pragma once
 
 // grpcw
+#include "grpcw/forward_declarations.hpp"
 #include "grpcw/server/detail/async_rpc_handler_interface.hpp"
 #include "grpcw/server/detail/tag.hpp"
 #include "grpcw/util/atomic_data.hpp"
