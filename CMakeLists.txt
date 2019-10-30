@@ -113,7 +113,7 @@ if (GRPCW_BUILD_TESTS) # BUILDING WITH TESTS
             )
 
     # Create an executable to run the tests
-    set(GRPCW_TESTS_NAME ${GRPCW_LIB_NAME}_tests)
+    set(GRPCW_TESTS_NAME ${GRPCW_LIB_NAME}-tests)
     add_executable(${GRPCW_TESTS_NAME} ${TEST_SOURCE_FILES})
 
     target_include_directories(${GRPCW_TESTS_NAME} PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>")
@@ -125,11 +125,11 @@ if (GRPCW_BUILD_TESTS) # BUILDING WITH TESTS
             )
     target_compile_options(${GRPCW_TESTS_NAME} PRIVATE ${GRPCW_COMPILE_FLAGS})
 
-    add_test(NAME test_${GRPCW_LIB_NAME} COMMAND ${GRPCW_TESTS_NAME})
+    add_test(NAME test-${GRPCW_LIB_NAME} COMMAND ${GRPCW_TESTS_NAME})
 
     if (COMMAND SETUP_TARGET_FOR_COVERAGE)
         # Create a build that generates coverage reports
-        setup_target_for_coverage(${GRPCW_TESTS_NAME}_coverage ${GRPCW_TESTS_NAME} coverage)
+        setup_target_for_coverage(${GRPCW_TESTS_NAME}-coverage ${GRPCW_TESTS_NAME} coverage)
         apply_coverage_dependencies(${GRPCW_LIB_NAME})
         apply_coverage_dependencies(${GRPCW_TESTS_NAME})
     endif ()
