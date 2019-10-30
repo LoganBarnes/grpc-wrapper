@@ -47,11 +47,3 @@ function(create_proto_library target_name proto_dir cpp_output_dir)
     target_link_libraries(${target_name} PUBLIC grpc-wrapper)
     target_include_directories(${target_name} SYSTEM PUBLIC ${cpp_output_dir})
 endfunction()
-
-if (${GRPCW_BUILD_TESTS})
-    create_proto_library(
-            testing-protos
-            ${CMAKE_CURRENT_LIST_DIR}/testing
-            ${CMAKE_BINARY_DIR}/generated/protos
-    )
-endif ()

@@ -24,56 +24,51 @@
 
 // grpcw
 #include "grpcw/client/grpc_client.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 namespace example {
 using namespace grpcw;
 
 ExampleClient::ExampleClient(const std::string& host_address)
-    : grpc_client_(util::make_unique<client::GrpcClient<protocol::Clock>>()) {
+    : grpc_client_(std::make_unique<client::GrpcClient<Service>>()) {
 
-    grpc_client_->change_server(host_address,
-                                [this](const client::GrpcClientState& state) { handle_state_change(state); });
-
-    // Connect to the stream that delivers time updates
-    grpc_client_->register_stream<protocol::Time>(
-        [](const std::unique_ptr<protocol::Clock::Stub>& stub, grpc::ClientContext* context) {
-            google::protobuf::Empty empty;
-            return stub->GetServerTimeUpdates(context, empty);
-        },
-        [this](const protocol::Time& time) { handle_time_update(time); });
+    grpc_client_->change_server(host_address, [](const client::GrpcClientState& state) {
+        std::cout << "Connection state: " << state << std::endl;
+    });
 }
 
 std::string ExampleClient::get_server_time_now(const protocol::Format& format) {
     protocol::Time time;
 
-    if (grpc_client_->use_stub([&time, &format](const std::unique_ptr<protocol::Clock::Stub>& stub) {
+    if (grpc_client_->use_stub([&time, &format](typename Service::Stub& stub) {
             // This lambda is only used if the client is connected
             grpc::ClientContext context;
             protocol::FormatRequest format_request;
             format_request.set_format(format);
-            stub->GetServerTimeNow(&context, format_request, &time);
+            stub.GetServerTimeNow(&context, format_request, &time);
         })) {
         return time.display_time();
     }
     return "Not connected a server";
 }
 
-void ExampleClient::handle_state_change(const client::GrpcClientState& state) {
-    auto connected = (state == client::GrpcClientState::connected);
-
-    if (connected != connected_) {
-        if (connected) {
-            std::cout << "Connection established" << std::endl;
-        } else {
-            std::cout << "Connection lost" << std::endl;
-        }
+void ExampleClient::toggle_streaming() {
+    if (stream_context_) {
+        stream_context_->TryCancel();
+    } else {
+        // Connect to the stream that delivers time updates
+        grpc_client_
+            ->register_stream<protocol::Time>([this](typename Service::Stub& stub, grpc::ClientContext* context) {
+                stream_context_ = context;
+                google::protobuf::Empty empty;
+                return stub.GetServerTimeUpdates(context, empty);
+            })
+            .on_update(
+                [](const protocol::Time& time) { std::cout << "Server time: " << time.display_time() << std::endl; })
+            .on_finish([this](const grpc::Status& status) {
+                stream_context_ = nullptr;
+                std::cout << "Stream finished: " << status.error_message() << std::endl;
+            });
     }
-    connected_ = connected;
-}
-
-void ExampleClient::handle_time_update(const protocol::Time& time_update) {
-    std::cout << "Server time: " << time_update.display_time() << std::endl;
 }
 
 } // namespace example
@@ -87,29 +82,57 @@ int main(int argc, const char* argv[]) {
 
     example::ExampleClient client(host_address);
 
-    std::cout << "Type 't' to get time or 'exit' to exit" << std::endl;
-    std::string input;
-    do {
-        std::cin >> input;
+    auto display_usage = [] {
+        std::cout << "Type characters to display the server time in different formats:\n"
+                  << "\t'f' - Display the full time\n"
+                  << "\t'h' - Display hours only\n"
+                  << "\t'm' - Display minutes only\n"
+                  << "\t's' - Display seconds only\n"
+                  << "\t't' - Toggle a stream of time updates\n"
+                  << "\t'u' - Display usage message\n"
+                  << "\t'x' - Exit the program\n"
+                  << std::endl;
+    };
 
-        if (input == "t") {
-            std::cerr << "Time now: " << client.get_server_time_now(example::protocol::Format::COMPOUND);
+    display_usage();
+
+    std::string input;
+    std::cin >> input;
+
+    while (std::cin.good() && input != "x") {
+        std::string time_string;
+
+        if (input == "f") {
+            time_string = client.get_server_time_now(example::protocol::Format::COMPOUND);
 
         } else if (input == "h") {
-            std::cerr << "Time now: " << client.get_server_time_now(example::protocol::Format::HOURS);
+            time_string = client.get_server_time_now(example::protocol::Format::HOURS);
 
         } else if (input == "m") {
-            std::cerr << "Time now: " << client.get_server_time_now(example::protocol::Format::MINUTES);
+            time_string = client.get_server_time_now(example::protocol::Format::MINUTES);
 
         } else if (input == "s") {
-            std::cerr << "Time now: " << client.get_server_time_now(example::protocol::Format::SECONDS);
+            time_string = client.get_server_time_now(example::protocol::Format::SECONDS);
+
+        } else if (input == "t") {
+            client.toggle_streaming();
+
+        } else if (input == "u") {
+            display_usage();
 
         } else {
-            std::cerr << "Input: " << input << std::endl;
-            std::cerr << "Type 't' to get time or 'exit' to exit" << std::endl;
+            std::cout << "Unrecognized input: '" << input << "'" << std::endl;
+            display_usage();
         }
 
-    } while (input != "exit");
+        if (!time_string.empty()) {
+            std::cout << "Time now: " << time_string << std::endl;
+        }
+
+        std::cin >> input;
+    }
+
+    std::cout << "\nExiting" << std::endl;
 
     return 0;
 }

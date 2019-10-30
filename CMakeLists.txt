@@ -31,7 +31,7 @@ option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been fo
 #############################
 ### Project Configuration ###
 #############################
-set(GRPCW_CXX_STANDARD 11)
+set(GRPCW_CXX_STANDARD 14)
 
 if (MSVC)
     add_definitions(-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS) # silly microsoft
@@ -41,14 +41,18 @@ endif ()
 if (GRPCW_USE_DEV_FLAGS)
     if (NOT MSVC)
         set(GRPCW_COMPILE_FLAGS
-                -Wall -Wextra -Werror -Wpedantic -Wunused -pedantic-errors
-                -Winit-self -Wold-style-cast -Woverloaded-virtual -Wsign-conversion
-                -Wmissing-declarations -Wmissing-include-dirs -Wshadow -Wno-unknown-pragmas
+                -Wall -Wextra -Werror -Wpedantic -Wunused -pedantic-errors -Winit-self
+                -Wold-style-cast -Woverloaded-virtual -Wsign-conversion -Wshadow
+                -Wmissing-declarations -Wmissing-include-dirs -Wno-unknown-pragmas
                 )
     else ()
         set(GRPCW_COMPILE_FLAGS /WX)
     endif ()
 endif ()
+
+include(cmake/ClangTidy.cmake)
+include(cmake/ThirdParty.cmake)
+include(cmake/CreateProtoLibrary.cmake)
 
 # "Glob is terrible/root of all evil" yeah yeah. CONFIGURE_DEPENDS in cmake 3.12
 # helps to fix that and it is super useful when refactoring
@@ -56,38 +60,11 @@ cmake_policy(SET CMP0009 NEW)
 
 get_directory_property(GRPCW_HAS_PARENT PARENT_DIRECTORY)
 
-##################
-### Clang-Tidy ###
-##################
-find_program(CLANG_TIDY_EXE
-        NAMES "clang-tidy"
-        DOC "Path to clang-tidy executable"
-        )
-if (NOT CLANG_TIDY_EXE)
-    message(STATUS "clang-tidy not found.")
-else ()
-    message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-    set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-format-style=file" "-fix" "-fix-errors")
-endif ()
-
-###################
-### Third Party ###
-###################
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-
-if (NOT ${GRPCW_SKIP_PACKAGE_FINDING})
-    find_package(Protobuf REQUIRED)
-    find_package(gRPC REQUIRED)
-endif ()
-
-add_subdirectory(third-party)
-
 ####################
 ### gRPC Wrapper ###
 ####################
+set(GRPCW_LIB_NAME grpc-wrapper)
+
 file(GLOB_RECURSE SOURCE_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
@@ -95,102 +72,93 @@ file(GLOB_RECURSE SOURCE_FILES
         ${CMAKE_CURRENT_LIST_DIR}/src/grpcw/*
         )
 
-add_library(grpc-wrapper ${SOURCE_FILES})
+add_library(${GRPCW_LIB_NAME} ${SOURCE_FILES})
 
 if (GRPCW_HAS_PARENT)
-    target_include_directories(grpc-wrapper SYSTEM
-            PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
-            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
+    target_include_directories(${GRPCW_LIB_NAME} SYSTEM
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+            PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
             )
 else ()
-    target_include_directories(grpc-wrapper
-            PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include
-            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
+    target_include_directories(${GRPCW_LIB_NAME}
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+            PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
             )
 endif ()
 
-target_link_libraries(grpc-wrapper
+target_link_libraries(${GRPCW_LIB_NAME}
         PUBLIC protobuf::libprotobuf
         PUBLIC gRPC::grpc++
         PUBLIC ${CMAKE_DL_LIBS}
         PUBLIC Threads::Threads
+        PRIVATE doctest
         )
 
-target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS})
-
-set_target_properties(
-        grpc-wrapper
-        PROPERTIES
-        CXX_STANDARD ${GRPCW_CXX_STANDARD}
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-        POSITION_INDEPENDENT_CODE ON
-        CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-)
-
-add_subdirectory(protos)
+target_compile_options(${GRPCW_LIB_NAME} PRIVATE ${GRPCW_COMPILE_FLAGS})
 
 ###############
 ### Testing ###
 ###############
+if (GRPCW_BUILD_TESTS) # BUILDING WITH TESTS
+    create_proto_library(
+            testing-protos
+            ${CMAKE_CURRENT_LIST_DIR}/protos/testing
+            ${CMAKE_BINARY_DIR}/generated/protos
+    )
 
-if (${GRPCW_BUILD_TESTS})
     file(GLOB_RECURSE TEST_SOURCE_FILES
             LIST_DIRECTORIES false
             CONFIGURE_DEPENDS
             ${CMAKE_CURRENT_LIST_DIR}/src/testing/*
             )
 
-    add_executable(grpc-wrapper-tests ${TEST_SOURCE_FILES} src/testing/main.cpp)
+    # Create an executable to run the tests
+    set(GRPCW_TESTS_NAME ${GRPCW_LIB_NAME}_tests)
+    add_executable(${GRPCW_TESTS_NAME} ${TEST_SOURCE_FILES})
 
-    target_link_libraries(grpc-wrapper-tests
-            PRIVATE grpc-wrapper
-            PRIVATE testing-protos
-            PRIVATE doctest
+    target_include_directories(${GRPCW_TESTS_NAME} PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>")
+    target_link_libraries(${GRPCW_TESTS_NAME}
+            PRIVATE
+            doctest_with_main
+            ${GRPCW_LIB_NAME}
+            testing-protos
             )
-    target_include_directories(grpc-wrapper-tests
-            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src
-            )
+    target_compile_options(${GRPCW_TESTS_NAME} PRIVATE ${GRPCW_COMPILE_FLAGS})
 
-    ### add coverage capabilities ###
-    find_program(
-            LCOV_EXE
-            NAMES "lcov"
-            DOC "Path to lcov executable"
-    )
+    add_test(NAME test_${GRPCW_LIB_NAME} COMMAND ${GRPCW_TESTS_NAME})
 
-    if (LCOV_EXE AND CMAKE_COMPILER_IS_GNUCXX AND CMAKE_BUILD_TYPE MATCHES "Debug")
-        include(CodeCoverage)
-        setup_target_for_coverage(grpc-wrapper-coverage grpc-wrapper-tests coverage)
-        set(PROFILE_FLAGS --coverage -fprofile-arcs -ftest-coverage -fno-inline)
-
-        target_compile_options(grpc-wrapper PRIVATE ${GRPCW_COMPILE_FLAGS} ${PROFILE_FLAGS})
-        target_link_libraries(grpc-wrapper PRIVATE gcov)
-
-        target_compile_options(grpc-wrapper-tests PRIVATE ${GRPCW_COMPILE_FLAGS} ${PROFILE_FLAGS})
-        target_link_libraries(grpc-wrapper-tests PRIVATE gcov)
+    if (COMMAND SETUP_TARGET_FOR_COVERAGE)
+        # Create a build that generates coverage reports
+        setup_target_for_coverage(${GRPCW_TESTS_NAME}_coverage ${GRPCW_TESTS_NAME} coverage)
+        apply_coverage_dependencies(${GRPCW_LIB_NAME})
+        apply_coverage_dependencies(${GRPCW_TESTS_NAME})
     endif ()
 
-    set_target_properties(
-            grpc-wrapper-tests
-            PROPERTIES
-            CXX_STANDARD ${GRPCW_CXX_STANDARD}
-            CXX_STANDARD_REQUIRED ON
-            CXX_EXTENSIONS OFF
-            POSITION_INDEPENDENT_CODE ON
-            CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    )
+else () # NOT BUILDING WITH TESTS
+    # The testing library is linked but we disable all the test macros
+    target_compile_definitions(${GRPCW_LIB_NAME} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 endif ()
+
+set_target_properties(
+        ${GRPCW_LIB_NAME}
+        ${GRPCW_TESTS_NAME}
+        PROPERTIES
+        # C++ flags
+        CXX_STANDARD ${GRPCW_CXX_STANDARD}
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+        POSITION_INDEPENDENT_CODE ON
+        # Clang-Tidy
+        CXX_CLANG_TIDY "${GRPCW_CLANG_TIDY}"
+        # Binary locations
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
 
 ###############
 ### Example ###
 ###############
-if (${GRPCW_BUILD_EXAMPLE})
+if (GRPCW_BUILD_EXAMPLE)
     add_subdirectory(example)
 endif ()

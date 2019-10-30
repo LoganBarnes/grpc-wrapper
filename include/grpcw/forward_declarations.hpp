@@ -43,7 +43,7 @@ class GrpcClient;
 template <typename Service>
 class GrpcClientStreamInterface;
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
+template <typename Service, typename Return>
 class GrpcClientStream;
 
 enum class GrpcClientState;

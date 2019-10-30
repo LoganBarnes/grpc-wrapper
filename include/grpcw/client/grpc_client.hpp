@@ -27,7 +27,6 @@
 #include "grpcw/client/grpc_client_stream.hpp"
 #include "grpcw/forward_declarations.hpp"
 #include "grpcw/util/atomic_data.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 // third-party
 #include <grpc++/channel.h>
@@ -61,6 +60,18 @@ inline GrpcClientState to_cnc_client_state(grpc_connectivity_state state) {
 
 template <typename Service>
 class GrpcClient {
+    template <typename Result>
+    using StreamInitFunc = typename GrpcClientStream<Service, Result>::InitFunc;
+
+    template <typename Result>
+    using StreamOnUpdate = typename GrpcClientStream<Service, Result>::OnUpdate;
+
+    template <typename Result>
+    using StreamOnFinish = typename GrpcClientStream<Service, Result>::OnFinish;
+
+    template <typename Result>
+    class GrpcClientStreamCallbackSetter;
+
 public:
     explicit GrpcClient() = default;
     ~GrpcClient();
@@ -86,8 +97,8 @@ public:
     ///
     /// \brief Add an RPC call that will return a stream of data
     ///
-    template <typename Return, typename InitFunc, typename Callback>
-    void* register_stream(InitFunc init_func, Callback callback);
+    template <typename Result>
+    GrpcClientStreamCallbackSetter<Result> register_stream(StreamInitFunc<Result> init_func);
 
     ///
     /// \brief Stop all connection attempts or disconnect (if already connected)
@@ -107,7 +118,7 @@ public:
     bool use_stub(const UsageFunc& usage_func);
 
 private:
-    // All the data shared between threads
+    /// \brief All the data shared between threads
     struct SharedData {
         grpc_connectivity_state connection_state = GRPC_CHANNEL_IDLE;
         std::shared_ptr<grpc::Channel> channel = nullptr;
@@ -115,22 +126,54 @@ private:
         std::unordered_map<void*, std::unique_ptr<GrpcClientStreamInterface<Service>>> streams;
     };
 
-    // Use atomic access to manipulate the shared data
+    /// Use atomic access to manipulate the shared data
     util::AtomicData<SharedData> shared_data_;
 
     bool using_in_process_server_ = false;
     std::string server_address_;
 
-    // Used as a label in 'queue_' so we know when the state changed.
+    /// Used as a label in 'queue_' so we know when the state changed.
     void* connection_change_tag = reinterpret_cast<void*>(0x1);
 
-    // These are resused after calling 'Shutdown' and 'join' respectively.
+    // These are pointers so they can be reused after calling 'Shutdown' and 'join' respectively.
     std::unique_ptr<grpc::CompletionQueue> queue_;
     std::unique_ptr<std::thread> run_thread_;
 
     void run(const std::function<void(const GrpcClientState&)>& connection_change_callback);
 
     const grpc::ChannelArguments& default_channel_arguments();
+
+    /// \brief Sets the `OnUpdate` callback for the given stream
+    template <typename Result>
+    void on_stream_update(void* key, StreamOnUpdate<Result> on_update);
+
+    /// \brief Sets the `OnFinish` callback for the given stream
+    template <typename Result>
+    void on_stream_finish(void* key, StreamOnFinish<Result> on_finish);
+
+    /// \brief Allows callbacks to be set for `GrpcClientStream`s
+    /// \tparam Result is the stream's result type
+    template <typename Result>
+    class GrpcClientStreamCallbackSetter {
+    public:
+        GrpcClientStreamCallbackSetter(GrpcClient<Service>& client, void* stream) : client_(client), stream_(stream) {}
+
+        /// \brief Set the OnUpdate callback for this stream
+        GrpcClientStreamCallbackSetter<Result>& on_update(StreamOnUpdate<Result> on_update) {
+            client_.on_stream_update<Result>(stream_, std::move(on_update));
+            return *this;
+        }
+
+        /// \brief Set the OnFinish callback for this stream
+        GrpcClientStreamCallbackSetter<Result>& on_finish(StreamOnFinish<Result> on_finish) {
+            client_.on_stream_finish<Result>(stream_, std::move(on_finish));
+            return *this;
+        }
+
+    private:
+        GrpcClient<Service>& client_;
+        void* stream_;
+    };
 };
 
 template <typename Service>
@@ -147,7 +190,7 @@ void GrpcClient<Service>::change_server(const std::string& address,
     // Set the non-shared data
     using_in_process_server_ = false;
     server_address_ = address;
-    queue_ = util::make_unique<grpc::CompletionQueue>();
+    queue_ = std::make_unique<grpc::CompletionQueue>();
 
     bool state_changed = false;
     GrpcClientState cnc_client_state;
@@ -178,8 +221,7 @@ void GrpcClient<Service>::change_server(const std::string& address,
     }
 
     // Wait for state changes
-    run_thread_
-        = util::make_unique<std::thread>(&GrpcClient<Service>::run, this, std::move(connection_change_callback));
+    run_thread_ = std::make_unique<std::thread>(&GrpcClient<Service>::run, this, std::move(connection_change_callback));
 }
 
 template <typename Service>
@@ -200,23 +242,23 @@ void GrpcClient<Service>::change_server(grpc::Server& in_process_server) {
 }
 
 template <typename Service>
-template <typename Return, typename InitFunc, typename Callback>
-void* GrpcClient<Service>::register_stream(InitFunc init_func, Callback callback) {
+template <typename Result>
+auto GrpcClient<Service>::register_stream(StreamInitFunc<Result> init_func) -> GrpcClientStreamCallbackSetter<Result> {
     void* key;
 
-    shared_data_.use_safely([=, &key](SharedData& data) {
-        auto stream = util::make_unique<GrpcClientStream<Service, Return, InitFunc, Callback>>(init_func, callback);
+    shared_data_.use_safely([init_func = std::move(init_func), &key](SharedData& data) {
+        auto stream = std::make_unique<GrpcClientStream<Service, Result>>(std::move(init_func));
 
         // Start the stream if the channel is already connected
         if (data.channel and data.connection_state == GRPC_CHANNEL_READY) {
-            stream->start_stream(data.stub);
+            stream->start_stream(*data.stub);
         }
 
         key = stream.get();
         data.streams.emplace(key, std::move(stream));
     });
 
-    return key;
+    return {*this, key};
 }
 
 template <typename Service>
@@ -268,7 +310,7 @@ bool GrpcClient<Service>::use_stub(const UsageFunc& usage_func) {
     shared_data_.use_safely([&](const SharedData& data) {
         if (data.connection_state == GRPC_CHANNEL_READY) {
             stub_valid = true;
-            usage_func(data.stub);
+            usage_func(*data.stub);
         }
     });
 
@@ -305,7 +347,7 @@ void GrpcClient<Service>::run(const std::function<void(const GrpcClientState&)>&
                     if (state_changed) {
                         if (data.connection_state == GRPC_CHANNEL_READY) {
                             for (auto& stream_pair : data.streams) {
-                                stream_pair.second->start_stream(data.stub);
+                                stream_pair.second->start_stream(*data.stub);
                             }
                         } else {
                             for (auto& stream_pair : data.streams) {
@@ -320,7 +362,7 @@ void GrpcClient<Service>::run(const std::function<void(const GrpcClientState&)>&
                 data.channel->NotifyOnStateChange(data.connection_state, deadline, queue_.get(), connection_change_tag);
 
             } else if (to_cnc_client_state(data.connection_state) != GrpcClientState::not_connected) {
-                // The channel has been shutdown but the state is not set do disconnected yet.
+                // The channel has been shutdown but the state is not set so do not disconnected yet.
                 // Set it appropriately.
                 data.connection_state = GRPC_CHANNEL_SHUTDOWN;
                 cnc_client_state = to_cnc_client_state(data.connection_state);
@@ -340,6 +382,36 @@ const grpc::ChannelArguments& GrpcClient<Service>::default_channel_arguments() {
     static grpc::ChannelArguments arguments;
     arguments.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
     return arguments;
+}
+
+template <typename Service>
+template <typename Result>
+void GrpcClient<Service>::on_stream_update(void* key, StreamOnUpdate<Result> on_update) {
+    shared_data_.use_safely([on_update = std::move(on_update), &key](SharedData& data) {
+        auto iter = data.streams.find(key);
+        if (iter == data.streams.end()) {
+            return;
+        }
+        auto* stream = dynamic_cast<GrpcClientStream<Service, Result>*>(iter->second.get());
+        assert(stream);
+
+        stream->on_update(std::move(on_update));
+    });
+}
+
+template <typename Service>
+template <typename Result>
+void GrpcClient<Service>::on_stream_finish(void* key, StreamOnFinish<Result> on_finish) {
+    shared_data_.use_safely([on_finish = std::move(on_finish), &key](SharedData& data) {
+        auto iter = data.streams.find(key);
+        if (iter == data.streams.end()) {
+            return;
+        }
+        auto* stream = dynamic_cast<GrpcClientStream<Service, Result>*>(iter->second.get());
+        assert(stream);
+
+        stream->on_finish(std::move(on_finish));
+    });
 }
 
 } // namespace client

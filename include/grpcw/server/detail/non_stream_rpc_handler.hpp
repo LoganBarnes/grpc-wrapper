@@ -26,7 +26,6 @@
 #include "grpcw/server/detail/stream_rpc_handler.hpp"
 #include "grpcw/server/detail/tag.hpp"
 #include "grpcw/util/atomic_data.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 // standard
 #include <thread>
@@ -124,7 +123,7 @@ void NonStreamRpcHandler<Service, Request, Response, Callback>::activate_next() 
     }
 
     // Add a new connection that is waiting to be activated
-    connection_ = util::make_unique<NonStreamRpcConnection<Request, Response>>();
+    connection_ = std::make_unique<NonStreamRpcConnection<Request, Response>>();
 
     (service_.*stream_func_)(&connection_->context,
                              &connection_->request,

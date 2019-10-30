@@ -36,12 +36,13 @@ public:
 
     std::string get_server_time_now(const protocol::Format& format);
 
-private:
-    std::unique_ptr<grpcw::client::GrpcClient<protocol::Clock>> grpc_client_;
-    bool connected_ = false;
+    void toggle_streaming();
 
-    void handle_state_change(const grpcw::client::GrpcClientState& state);
-    void handle_time_update(const protocol::Time& time_update);
+private:
+    using Service = protocol::Clock;
+    std::unique_ptr<grpcw::client::GrpcClient<Service>> grpc_client_;
+
+    grpc::ClientContext* stream_context_ = nullptr;
 };
 
 } // namespace grpcw

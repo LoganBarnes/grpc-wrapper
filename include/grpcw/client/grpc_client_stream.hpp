@@ -22,12 +22,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "grpcw/util/make_unique.hpp"
-
 // third-party
 #include <grpc++/client_context.h>
 
 // standard
+#include <functional>
 #include <thread>
 
 namespace grpcw {
@@ -37,7 +36,7 @@ template <typename Service>
 class GrpcClientStreamInterface {
 public:
     virtual ~GrpcClientStreamInterface() = 0;
-    virtual void start_stream(std::unique_ptr<typename Service::Stub>& stub) = 0;
+    virtual void start_stream(typename Service::Stub& stub) = 0;
     virtual void stop_stream() = 0;
     virtual bool streaming() = 0;
 };
@@ -45,15 +44,23 @@ public:
 template <typename Service>
 GrpcClientStreamInterface<Service>::~GrpcClientStreamInterface() = default;
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
+template <typename Service, typename Return>
 class GrpcClientStream : public GrpcClientStreamInterface<Service> {
 public:
-    GrpcClientStream(InitFunc init_func, Callback callback);
+    using InitFunc
+        = std::function<std::unique_ptr<grpc::ClientReader<Return>>(typename Service::Stub&, grpc::ClientContext*)>;
+    using OnUpdate = std::function<void(Return&&)>;
+    using OnFinish = std::function<void(const grpc::Status&)>;
+
+    explicit GrpcClientStream(InitFunc init_func);
     ~GrpcClientStream() = default;
 
-    void start_stream(std::unique_ptr<typename Service::Stub>& stub) override;
+    void start_stream(typename Service::Stub& stub) override;
     void stop_stream() override;
     bool streaming() override;
+
+    GrpcClientStream<Service, Return>& on_update(OnUpdate on_update);
+    GrpcClientStream<Service, Return>& on_finish(OnFinish on_finish);
 
 private:
     std::unique_ptr<grpc::ClientContext> context_ = nullptr;
@@ -61,36 +68,40 @@ private:
     std::unique_ptr<std::thread> stream_thread_ = nullptr;
 
     InitFunc init_func_;
-    Callback callback_;
+    OnUpdate on_update_;
+    OnFinish on_finish_;
 };
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
-GrpcClientStream<Service, Return, InitFunc, Callback>::GrpcClientStream(InitFunc init_func, Callback callback)
-    : init_func_(init_func), callback_(callback) {}
+template <typename Service, typename Return>
+GrpcClientStream<Service, Return>::GrpcClientStream(InitFunc init_func) : init_func_(init_func) {}
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
-void GrpcClientStream<Service, Return, InitFunc, Callback>::start_stream(
-    std::unique_ptr<typename Service::Stub>& stub) {
+template <typename Service, typename Return>
+void GrpcClientStream<Service, Return>::start_stream(typename Service::Stub& stub) {
     if (streaming()) {
         return;
     }
 
-    context_ = util::make_unique<grpc::ClientContext>();
+    context_ = std::make_unique<grpc::ClientContext>();
     reader_ = init_func_(stub, context_.get());
 
-    stream_thread_ = util::make_unique<std::thread>([this] {
+    stream_thread_ = std::make_unique<std::thread>([this] {
         Return update;
 
         while (reader_->Read(&update)) {
-            callback_(update);
+            if (on_update_) {
+                on_update_(std::move(update));
+            }
         }
 
         grpc::Status status = reader_->Finish();
+        if (on_finish_) {
+            on_finish_(status);
+        }
     });
 }
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
-void GrpcClientStream<Service, Return, InitFunc, Callback>::stop_stream() {
+template <typename Service, typename Return>
+void GrpcClientStream<Service, Return>::stop_stream() {
     if (not streaming()) {
         return;
     }
@@ -100,9 +111,21 @@ void GrpcClientStream<Service, Return, InitFunc, Callback>::stop_stream() {
     context_ = nullptr;
 }
 
-template <typename Service, typename Return, typename InitFunc, typename Callback>
-bool GrpcClientStream<Service, Return, InitFunc, Callback>::streaming() {
+template <typename Service, typename Return>
+bool GrpcClientStream<Service, Return>::streaming() {
     return context_ != nullptr;
+}
+
+template <typename Service, typename Return>
+GrpcClientStream<Service, Return>& GrpcClientStream<Service, Return>::on_update(OnUpdate on_update) {
+    on_update_ = std::move(on_update);
+    return *this;
+}
+
+template <typename Service, typename Return>
+GrpcClientStream<Service, Return>& GrpcClientStream<Service, Return>::on_finish(OnFinish on_finish) {
+    on_finish_ = std::move(on_finish);
+    return *this;
 }
 
 } // namespace client

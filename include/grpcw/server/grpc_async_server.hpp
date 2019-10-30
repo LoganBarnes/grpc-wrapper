@@ -26,7 +26,6 @@
 #include "grpcw/server/detail/non_stream_rpc_handler.hpp"
 #include "grpcw/server/detail/stream_rpc_handler.hpp"
 #include "grpcw/util/atomic_data.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 // third-party
 #include <grpc++/security/server_credentials.h>
@@ -112,7 +111,7 @@ template <typename BaseService, typename Request, typename Response, typename Ca
 void GrpcAsyncServer<Service>::register_async(AsyncNoStreamFunc<BaseService, Request, Response> no_stream_func,
                                               Callback&& callback) {
     static_assert(std::is_base_of<BaseService, Service>::value, "BaseService must be a base class of Service");
-    auto handler = util::make_unique<
+    auto handler = std::make_unique<
         detail::NonStreamRpcHandler<BaseService, Request, Response, Callback>>(*service_,
                                                                                *server_queue_,
                                                                                no_stream_func,
@@ -129,7 +128,7 @@ GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseServic
                                                 Callback&& callback,
                                                 DeletionCallback&& deletion_callback) {
     static_assert(std::is_base_of<BaseService, Service>::value, "BaseService must be a base class of Service");
-    auto handler = util::make_unique<
+    auto handler = std::make_unique<
         detail::StreamRpcHandler<BaseService, Request, Response, Callback, DeletionCallback>>(*service_,
                                                                                               *server_queue_,
                                                                                               stream_func,

@@ -24,7 +24,6 @@
 
 // grpcw
 #include "grpcw/server/grpc_async_server.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 // third-party
 #include <grpc++/security/server_credentials.h>
@@ -50,8 +49,8 @@ void make_pretty_time_string(std::ostream& os, const Duration& duration) {
 
 ExampleServer::ExampleServer(const std::string& server_address)
     : server_start_time_(std::chrono::system_clock::now()),
-      server_(util::make_unique<server::GrpcAsyncServer<Service>>(std::make_shared<protocol::Clock::AsyncService>(),
-                                                                  server_address)),
+      server_(std::make_unique<server::GrpcAsyncServer<Service>>(std::make_shared<protocol::Clock::AsyncService>(),
+                                                                 server_address)),
       keep_ticking_(true) {
 
     /*
@@ -114,7 +113,6 @@ grpc::Status ExampleServer::get_time(const protocol::FormatRequest& request, pro
 
     // We can safely ignore these?
     case protocol::Format_INT_MIN_SENTINEL_DO_NOT_USE_:
-        break;
     case protocol::Format_INT_MAX_SENTINEL_DO_NOT_USE_:
         break;
     }

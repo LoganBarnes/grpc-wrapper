@@ -39,12 +39,15 @@ set_target_properties(
         example-client
         example-server
         PROPERTIES
+        # C++ flags
         CXX_STANDARD ${GRPCW_CXX_STANDARD}
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
         POSITION_INDEPENDENT_CODE ON
-        CXX_CLANG_TIDY "${DO_CLANG_TIDY}"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        # Clang-Tidy
+        CXX_CLANG_TIDY "${GRPCW_CLANG_TIDY}"
+        # Binary locations
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )

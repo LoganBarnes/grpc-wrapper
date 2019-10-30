@@ -26,10 +26,10 @@
 #include "grpcw/server/detail/async_rpc_handler_interface.hpp"
 #include "grpcw/server/detail/tag.hpp"
 #include "grpcw/util/atomic_data.hpp"
-#include "grpcw/util/make_unique.hpp"
 
 // standard
 #include <atomic>
+#include <memory>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -150,7 +150,7 @@ void StreamRpcHandler<Service, Request, Response, Callback, DeletionCallback>::a
         }
 
         // Add a new connection that is waiting to be activated
-        connections.next = util::make_unique<StreamConnection<Request, Response>>();
+        connections.next = std::make_unique<StreamConnection<Request, Response>>();
 
         connections.next->context.AsyncNotifyWhenDone(
             detail::make_tag(connections.next.get(), TagLabel::done, &connections.tags));
