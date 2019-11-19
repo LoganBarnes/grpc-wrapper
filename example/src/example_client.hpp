@@ -40,9 +40,10 @@ public:
 
 private:
     using Service = protocol::Clock;
-    std::unique_ptr<grpcw::client::GrpcClient<Service>> grpc_client_;
 
     grpc::ClientContext* stream_context_ = nullptr;
+
+    std::unique_ptr<grpcw::client::GrpcClient<Service>> grpc_client_;
 };
 
 } // namespace grpcw

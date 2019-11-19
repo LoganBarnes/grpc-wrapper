@@ -21,7 +21,7 @@
 # SOFTWARE.
 ##########################################################################################
 create_proto_library(
-        example-protos
+        example_protos
         ${CMAKE_CURRENT_LIST_DIR}/protos
         ${CMAKE_BINARY_DIR}/generated/protos
 )
@@ -29,8 +29,8 @@ create_proto_library(
 add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
 add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
 
-target_link_libraries(example-client PRIVATE grpc-wrapper example-protos)
-target_link_libraries(example-server PRIVATE grpc-wrapper example-protos)
+target_link_libraries(example-client PRIVATE grpc_wrapper example_protos)
+target_link_libraries(example-server PRIVATE grpc_wrapper example_protos)
 
 target_compile_options(example-client PRIVATE ${GRPCW_COMPILE_FLAGS})
 target_compile_options(example-server PRIVATE ${GRPCW_COMPILE_FLAGS})

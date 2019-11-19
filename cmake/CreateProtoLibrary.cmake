@@ -44,6 +44,6 @@ function(create_proto_library target_name proto_dir cpp_output_dir)
     grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${cpp_output_dir} ${PROTO_FILES})
 
     add_library(${target_name} ${PROTO_HDRS} ${PROTO_SRCS} ${GRPC_HDRS} ${GRPC_SRCS})
-    target_link_libraries(${target_name} PUBLIC grpc-wrapper)
+    target_link_libraries(${target_name} PUBLIC grpc_wrapper)
     target_include_directories(${target_name} SYSTEM PUBLIC ${cpp_output_dir})
 endfunction()

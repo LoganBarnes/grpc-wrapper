@@ -49,9 +49,9 @@ void make_pretty_time_string(std::ostream& os, const Duration& duration) {
 
 ExampleServer::ExampleServer(const std::string& server_address)
     : server_start_time_(std::chrono::system_clock::now()),
+      keep_ticking_(true),
       server_(std::make_unique<server::GrpcAsyncServer<Service>>(std::make_shared<protocol::Clock::AsyncService>(),
-                                                                 server_address)),
-      keep_ticking_(true) {
+                                                                 server_address)) {
 
     /*
      * Streaming calls

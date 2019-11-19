@@ -33,6 +33,15 @@ option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been fo
 #############################
 set(GRPCW_CXX_STANDARD 14)
 
+# ccache
+find_program(GRPCW_CCACHE_PROGRAM ccache)
+if (GRPCW_CCACHE_PROGRAM)
+    message("-- Found CCache: ${GRPCW_CCACHE_PROGRAM}")
+else ()
+    message("-- Not Found: CCache")
+endif ()
+
+
 if (MSVC)
     add_definitions(-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS) # silly microsoft
     set(SYSTEM_FLAGS /experimental:external /external:anglebrackets /external:W0)
@@ -41,12 +50,23 @@ endif ()
 if (GRPCW_USE_DEV_FLAGS)
     if (NOT MSVC)
         set(GRPCW_COMPILE_FLAGS
-                -Wall -Wextra -Werror -Wpedantic -Wunused -pedantic-errors -Winit-self
-                -Wold-style-cast -Woverloaded-virtual -Wsign-conversion -Wshadow
-                -Wmissing-declarations -Wmissing-include-dirs -Wno-unknown-pragmas
+                $<$<COMPILE_LANGUAGE:CXX>:-Wall>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wextra>
+                $<$<COMPILE_LANGUAGE:CXX>:-Werror>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wpedantic>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wunused>
+                $<$<COMPILE_LANGUAGE:CXX>:-pedantic-errors>
+                $<$<COMPILE_LANGUAGE:CXX>:-Winit-self>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+                $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wsign-conversion>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wshadow>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wmissing-declarations>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wmissing-include-dirs>
+                $<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>
                 )
     else ()
-        set(GRPCW_COMPILE_FLAGS /WX)
+        set(GRPCW_COMPILE_FLAGS $<$<COMPILE_LANGUAGE:CXX>:/WX>)
     endif ()
 endif ()
 
@@ -63,91 +83,93 @@ get_directory_property(GRPCW_HAS_PARENT PARENT_DIRECTORY)
 ####################
 ### gRPC Wrapper ###
 ####################
-set(GRPCW_LIB_NAME grpc-wrapper)
+set(GRPCW_LIBRARY grpc_wrapper)
 
-file(GLOB_RECURSE SOURCE_FILES
+file(GLOB_RECURSE GRPCW_SOURCE_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_LIST_DIR}/include/grpcw/*
         ${CMAKE_CURRENT_LIST_DIR}/src/grpcw/*
         )
 
-add_library(${GRPCW_LIB_NAME} ${SOURCE_FILES})
-
-if (GRPCW_HAS_PARENT)
-    target_include_directories(${GRPCW_LIB_NAME} SYSTEM
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-            PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
-            )
-else ()
-    target_include_directories(${GRPCW_LIB_NAME}
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-            PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
-            )
-endif ()
-
-target_link_libraries(${GRPCW_LIB_NAME}
+add_library(${GRPCW_LIBRARY} ${GRPCW_SOURCE_FILES})
+target_link_libraries(${GRPCW_LIBRARY}
         PUBLIC protobuf::libprotobuf
         PUBLIC gRPC::grpc++
         PUBLIC ${CMAKE_DL_LIBS}
         PUBLIC Threads::Threads
         PRIVATE doctest
         )
+target_compile_options(${GRPCW_LIBRARY} PRIVATE ${GRPCW_COMPILE_FLAGS})
+target_compile_definitions(${GRPCW_LIBRARY} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 
-target_compile_options(${GRPCW_LIB_NAME} PRIVATE ${GRPCW_COMPILE_FLAGS})
+if (GRPCW_HAS_PARENT)
+    target_include_directories(${GRPCW_LIBRARY} SYSTEM
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
+            )
+else ()
+    target_include_directories(${GRPCW_LIBRARY}
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
+            )
+endif ()
 
 ###############
 ### Testing ###
 ###############
-if (GRPCW_BUILD_TESTS) # BUILDING WITH TESTS
+if (GRPCW_BUILD_TESTS)
+    set(GRPCW_TESTS test_${GRPCW_LIBRARY})
+
     create_proto_library(
-            testing-protos
+            testing_protos
             ${CMAKE_CURRENT_LIST_DIR}/protos/testing
             ${CMAKE_BINARY_DIR}/generated/protos
     )
 
-    file(GLOB_RECURSE TEST_SOURCE_FILES
+    file(GLOB_RECURSE GRPCW_TEST_FILES
             LIST_DIRECTORIES false
             CONFIGURE_DEPENDS
             ${CMAKE_CURRENT_LIST_DIR}/src/testing/*
             )
 
     # Create an executable to run the tests
-    set(GRPCW_TESTS_NAME ${GRPCW_LIB_NAME}-tests)
-    add_executable(${GRPCW_TESTS_NAME} ${TEST_SOURCE_FILES})
-
-    target_include_directories(${GRPCW_TESTS_NAME} PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>")
-    target_link_libraries(${GRPCW_TESTS_NAME}
-            PRIVATE
-            doctest_with_main
-            ${GRPCW_LIB_NAME}
-            testing-protos
+    add_executable(${GRPCW_TESTS} ${GRPCW_SOURCE_FILES} ${GRPCW_TEST_FILES})
+    target_link_libraries(${GRPCW_TESTS}
+            PRIVATE doctest_with_main
+            PRIVATE ${GRPCW_LIBRARY}
+            PRIVATE testing_protos
             )
-    target_compile_options(${GRPCW_TESTS_NAME} PRIVATE ${GRPCW_COMPILE_FLAGS})
+    target_compile_options(${GRPCW_TESTS}
+            PRIVATE
+            ${GRPCW_COMPILE_FLAGS}
+            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
+            )
+    target_link_options(${GRPCW_TESTS}
+            PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
+            )
 
-    add_test(NAME test-${GRPCW_LIB_NAME} COMMAND ${GRPCW_TESTS_NAME})
+    add_test(NAME ${GRPCW_LIBRARY}_tests COMMAND ${GRPCW_TESTS})
 
     if (COMMAND SETUP_TARGET_FOR_COVERAGE)
         # Create a build that generates coverage reports
-        setup_target_for_coverage(${GRPCW_TESTS_NAME}-coverage ${GRPCW_TESTS_NAME} coverage)
-        apply_coverage_dependencies(${GRPCW_LIB_NAME})
-        apply_coverage_dependencies(${GRPCW_TESTS_NAME})
+        setup_target_for_coverage(${GRPCW_TESTS}_coverage ${GRPCW_TESTS} ${GRPCW_TESTS}_coverage)
+        apply_coverage_dependencies(${GRPCW_TESTS})
     endif ()
-
-else () # NOT BUILDING WITH TESTS
-    # The testing library is linked but we disable all the test macros
-    target_compile_definitions(${GRPCW_LIB_NAME} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 endif ()
 
+
 set_target_properties(
-        ${GRPCW_LIB_NAME}
-        ${GRPCW_TESTS_NAME}
+        ${GRPCW_LIBRARY}
+        ${GRPCW_TESTS}
         PROPERTIES
         # C++ flags
         CXX_STANDARD ${GRPCW_CXX_STANDARD}
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
         POSITION_INDEPENDENT_CODE ON
+        # CCache
+        COMPILER_LAUNCHER "${GRPCW_CCACHE_PROGRAM}"
         # Clang-Tidy
         CXX_CLANG_TIDY "${GRPCW_CLANG_TIDY}"
         # Binary locations

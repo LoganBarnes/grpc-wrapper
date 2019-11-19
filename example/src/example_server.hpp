@@ -44,17 +44,18 @@ public:
     grpc::Server& server();
 
 private:
+    using Service = protocol::Clock::AsyncService;
+
     using TimePoint = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
     const TimePoint server_start_time_;
-
-    using Service = protocol::Clock::AsyncService;
-    std::unique_ptr<grpcw::server::GrpcAsyncServer<Service>> server_;
 
     // send back updates to clients
     grpcw::server::StreamInterface<protocol::Time>* time_stream_;
 
     std::thread ticker_ = {};
     std::atomic_bool keep_ticking_;
+
+    std::unique_ptr<grpcw::server::GrpcAsyncServer<Service>> server_;
 
     grpc::Status get_time(const protocol::FormatRequest& request, protocol::Time* time);
 };
