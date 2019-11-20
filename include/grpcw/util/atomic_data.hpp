@@ -55,24 +55,27 @@ namespace util {
 template <typename T>
 class AtomicData {
 public:
-    explicit AtomicData(T data = {});
+    explicit AtomicData(T&& data);
+
+    template <typename... Args>
+    explicit AtomicData(Args&&... args);
 
     /// \brief Use the data in a thread safe manner.
     template <typename Func>
-    void use_safely(const Func& func);
+    auto use_safely(const Func& func);
 
     template <typename Func>
-    void use_safely(const Func& func) const;
+    auto use_safely(const Func& func) const;
 
     ///
     /// \brief Wait for 'notify_one' or 'notify_all' to be called on this data
     ///        structure before using the data in a thread safe manner.
     ///
     template <typename Pred, typename Func>
-    void wait_to_use_safely(const Pred& predicate, const Func& func);
+    auto wait_to_use_safely(const Pred& predicate, const Func& func);
 
     template <typename Pred, typename Func>
-    void wait_to_use_safely(const Pred& predicate, const Func& func) const;
+    auto wait_to_use_safely(const Pred& predicate, const Func& func) const;
 
     ///
     /// \brief Allow one 'wait_to_use_safely' function to continue.
@@ -91,36 +94,40 @@ private:
 };
 
 template <typename T>
-AtomicData<T>::AtomicData(T data) : data_(std::move(data)) {}
+AtomicData<T>::AtomicData(T&& data) : data_(std::forward<T>(data)) {}
+
+template <typename T>
+template <typename... Args>
+AtomicData<T>::AtomicData(Args&&... args) : data_(std::forward<Args>(args)...) {}
 
 template <typename T>
 template <typename Func>
-void AtomicData<T>::use_safely(const Func& func) {
+auto AtomicData<T>::use_safely(const Func& func) {
     std::lock_guard<std::mutex> scoped_lock(lock_);
-    func(data_);
+    return func(data_);
 }
 
 template <typename T>
 template <typename Func>
-void AtomicData<T>::use_safely(const Func& func) const {
+auto AtomicData<T>::use_safely(const Func& func) const {
     std::lock_guard<std::mutex> scoped_lock(lock_);
-    func(data_);
+    return func(data_);
 }
 
 template <typename T>
 template <typename Pred, typename Func>
-void AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) {
+auto AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) {
     std::unique_lock<std::mutex> unlockable_lock(lock_);
     condition_.wait(unlockable_lock, [&] { return predicate(data_); });
-    func(data_);
+    return func(data_);
 }
 
 template <typename T>
 template <typename Pred, typename Func>
-void AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) const {
+auto AtomicData<T>::wait_to_use_safely(const Pred& predicate, const Func& func) const {
     std::unique_lock<std::mutex> unlockable_lock(lock_);
     condition_.wait(unlockable_lock, [&] { return predicate(data_); });
-    func(data_);
+    return func(data_);
 }
 
 template <typename T>

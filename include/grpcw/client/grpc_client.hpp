@@ -58,6 +58,8 @@ inline GrpcClientState to_cnc_client_state(grpc_connectivity_state state) {
     throw std::invalid_argument("Invalid grpc_connectivity_state");
 }
 
+auto default_channel_arguments() -> grpc::ChannelArguments;
+
 template <typename Service>
 class GrpcClient {
     template <typename Result>
@@ -68,6 +70,8 @@ class GrpcClient {
 
     template <typename Result>
     using StreamOnFinish = typename GrpcClientStream<Service, Result>::OnFinish;
+
+    using ConnectionChangeCallback = std::function<void(GrpcClientState)>;
 
     template <typename Result>
     class GrpcClientStreamCallbackSetter;
@@ -84,15 +88,14 @@ public:
     ///
     /// NOTE: The callback will be invoked from a separate thread.
     ///
-    void change_server(const std::string& address,
-                       std::function<void(const GrpcClientState&)> connection_change_callback);
+    void change_server(const std::string& address, ConnectionChangeCallback connection_change_callback);
 
     ///
     /// \brief Create a direct channel to a server running in the same process.
     ///
     /// No connection callback is needed because the client will always be in a connected state
     ///
-    void change_server(grpc::Server& in_process_server);
+    void change_server(std::shared_ptr<grpc::Channel> in_process_channel);
 
     ///
     /// \brief Add an RPC call that will return a stream of data
@@ -141,8 +144,6 @@ private:
 
     void run(const std::function<void(const GrpcClientState&)>& connection_change_callback);
 
-    const grpc::ChannelArguments& default_channel_arguments();
-
     /// \brief Sets the `OnUpdate` callback for the given stream
     template <typename Result>
     void on_stream_update(void* key, StreamOnUpdate<Result> on_update);
@@ -183,7 +184,7 @@ GrpcClient<Service>::~GrpcClient() {
 
 template <typename Service>
 void GrpcClient<Service>::change_server(const std::string& address,
-                                        std::function<void(const GrpcClientState&)> connection_change_callback) {
+                                        ConnectionChangeCallback connection_change_callback) {
     // Disconnect from the previous server
     kill_streams_and_channel();
 
@@ -200,7 +201,7 @@ void GrpcClient<Service>::change_server(const std::string& address,
         // Create new channel to establish a connection
         data.channel = grpc::CreateCustomChannel(server_address_,
                                                  grpc::InsecureChannelCredentials(),
-                                                 GrpcClient<Service>::default_channel_arguments());
+                                                 client::default_channel_arguments());
         data.stub = Service::NewStub(data.channel);
 
         // Get the current connection state and check if it has changed
@@ -225,15 +226,15 @@ void GrpcClient<Service>::change_server(const std::string& address,
 }
 
 template <typename Service>
-void GrpcClient<Service>::change_server(grpc::Server& in_process_server) {
+void GrpcClient<Service>::change_server(std::shared_ptr<grpc::Channel> in_process_channel) {
     // Disconnect from the previous server
     kill_streams_and_channel();
 
     using_in_process_server_ = true;
     server_address_ = "In-Process";
 
-    shared_data_.use_safely([&](SharedData& data) {
-        data.channel = in_process_server.InProcessChannel(GrpcClient<Service>::default_channel_arguments());
+    shared_data_.use_safely([in_process_channel = std::move(in_process_channel)](SharedData& data) {
+        data.channel = in_process_channel;
         data.stub = Service::NewStub(data.channel);
 
         // No connectivity updates need to happen because the server is running in the same process
@@ -375,13 +376,6 @@ void GrpcClient<Service>::run(const std::function<void(const GrpcClientState&)>&
             connection_change_callback(cnc_client_state);
         }
     }
-}
-
-template <typename Service>
-const grpc::ChannelArguments& GrpcClient<Service>::default_channel_arguments() {
-    static grpc::ChannelArguments arguments;
-    arguments.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
-    return arguments;
 }
 
 template <typename Service>

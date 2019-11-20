@@ -22,21 +22,23 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #include "grpcw/server/scoped_grpc_server.hpp"
 
-#include "grpcw/server/grpc_server.hpp"
+// third-party
+#include <grpc++/impl/codegen/service_type.h>
 
 namespace grpcw {
 namespace server {
 
-ScopedGrpcServer::ScopedGrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address)
-    : server_(new GrpcServer(std::move(service), server_address)), run_thread_([this] { server_->run(); }) {}
+ScopedGrpcServer::ScopedGrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address)
+    : server_(std::move(service), server_address), run_thread_([this] { server_.run(); }) {}
 
 ScopedGrpcServer::~ScopedGrpcServer() {
-    server_->shutdown();
+    server_.shutdown();
     run_thread_.join();
 }
 
-grpc::Server& ScopedGrpcServer::server() {
-    return *server_->server();
+auto ScopedGrpcServer::in_process_channel(const grpc::ChannelArguments& channel_arguments)
+    -> std::shared_ptr<grpc::Channel> {
+    return server_.in_process_channel(channel_arguments);
 }
 
 } // namespace server

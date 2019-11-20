@@ -30,35 +30,10 @@
 
 using namespace grpcw;
 
-TEST_CASE("[grpcw] shared_service_is_the_same") {
-    std::string server_address = "0.0.0.0:50050";
-    auto service = std::make_shared<testing::TestService>();
-    server::GrpcServer server(service, server_address);
-
-    CHECK(server.service() == service);
-
-    server.shutdown();
-}
-
-TEST_CASE("[grpcw] const_service_can_be_used") {
-    std::string server_address = "0.0.0.0:50050";
-    server::GrpcServer server(std::make_shared<testing::TestService>(), server_address);
-
-    {
-        const auto& const_server = server;
-
-        CHECK_FALSE(const_server.service()->has_async_methods());
-        CHECK_FALSE(const_server.service()->has_generic_methods());
-        CHECK(const_server.service()->has_synchronous_methods());
-    }
-
-    server.shutdown();
-}
-
 TEST_CASE("[grpcw] run_server_and_check_echo_rpc_call") {
     // Create a server and run it in a separate thread
     std::string server_address = "0.0.0.0:50050";
-    server::GrpcServer server(std::make_shared<testing::TestService>(), server_address);
+    server::GrpcServer server(std::make_unique<testing::TestService>(), server_address);
     std::thread run_thread([&] { server.run(); });
 
     // Create a client to connect to the server
@@ -90,11 +65,11 @@ TEST_CASE("[grpcw] run_inprocess_server_and_check_echo_rpc_call") {
 
     // Create a server and run it in a separate thread
     std::string server_address = "0.0.0.0:50050";
-    server::GrpcServer server(std::make_shared<testing::TestService>(), server_address);
+    server::GrpcServer server(std::make_unique<testing::TestService>(), server_address);
     std::thread run_thread([&] { server.run(); });
 
     // Create a client using the server's in-process channel
-    auto stub = testing::protocol::Test::NewStub(server.server()->InProcessChannel(grpc::ChannelArguments{}));
+    auto stub = testing::protocol::Test::NewStub(server.in_process_channel());
 
     // Send a message to the server
     std::string test_msg = "a1, 23kqv9 !F(VMas3982fj!#!#+(*@)(a assdaf;le 1342 asdw32nm";

@@ -85,6 +85,7 @@ ExampleServer::~ExampleServer() {
     if (ticker_.joinable()) {
         ticker_.join();
     }
+    server_->shutdown_and_wait();
 }
 
 grpc::Server& ExampleServer::server() {

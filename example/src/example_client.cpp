@@ -31,7 +31,7 @@ using namespace grpcw;
 ExampleClient::ExampleClient(const std::string& host_address)
     : grpc_client_(std::make_unique<client::GrpcClient<Service>>()) {
 
-    grpc_client_->change_server(host_address, [](const client::GrpcClientState& state) {
+    grpc_client_->change_server(host_address, [](client::GrpcClientState state) {
         std::cout << "Connection state: " << state << std::endl;
     });
 }

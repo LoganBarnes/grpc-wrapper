@@ -27,6 +27,7 @@ option(GRPCW_BUILD_TESTS "Build unit tests" OFF)
 option(GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
 option(GRPCW_USE_DEV_FLAGS "Compile with all the flags" OFF)
 option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been found by CMake" OFF)
+option(GRPCW_THREAD_SANTIZING "Add thread sanitizer flags (only in debug mode)" OFF)
 
 #############################
 ### Project Configuration ###
@@ -40,7 +41,6 @@ if (GRPCW_CCACHE_PROGRAM)
 else ()
     message("-- Not Found: CCache")
 endif ()
-
 
 if (MSVC)
     add_definitions(-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS) # silly microsoft
@@ -115,6 +115,11 @@ else ()
             )
 endif ()
 
+if (GRPCW_THREAD_SANTIZING)
+    target_compile_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_link_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+endif ()
+
 ###############
 ### Testing ###
 ###############
@@ -140,14 +145,12 @@ if (GRPCW_BUILD_TESTS)
             PRIVATE ${GRPCW_LIBRARY}
             PRIVATE testing_protos
             )
-    target_compile_options(${GRPCW_TESTS}
-            PRIVATE
-            ${GRPCW_COMPILE_FLAGS}
-            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
-            )
-    target_link_options(${GRPCW_TESTS}
-            PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
-            )
+    target_compile_options(${GRPCW_TESTS} PRIVATE ${GRPCW_COMPILE_FLAGS})
+
+    if (GRPCW_THREAD_SANTIZING)
+        target_compile_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+        target_link_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    endif ()
 
     add_test(NAME ${GRPCW_LIBRARY}_tests COMMAND ${GRPCW_TESTS})
 

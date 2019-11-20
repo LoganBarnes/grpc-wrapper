@@ -54,6 +54,12 @@ public:
     detail::StreamRpcHandlerCallbackSetter<BaseService, Request, Response>
     register_async_stream(AsyncServerStreamFunc<BaseService, Request, Response> stream_func);
 
+    // This is also called in the destructor
+    void shutdown_and_wait();
+
+    template <typename Duration>
+    void force_shutdown_in(Duration duration);
+
     grpc::Server& server();
 
 private:
@@ -94,7 +100,7 @@ GrpcAsyncServer<Service>::GrpcAsyncServer(std::shared_ptr<Service> service, cons
 
 template <typename Service>
 GrpcAsyncServer<Service>::~GrpcAsyncServer() {
-    server_->Shutdown();
+    shutdown_and_wait();
     server_queue_->Shutdown();
 
     run_thread_.join();
@@ -127,6 +133,17 @@ auto GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseS
     auto* tag = handler.get();
     rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
     return {tag};
+}
+
+template <typename Service>
+void GrpcAsyncServer<Service>::shutdown_and_wait() {
+    server_->Shutdown();
+}
+
+template <typename Service>
+template <typename Duration>
+void GrpcAsyncServer<Service>::force_shutdown_in(Duration duration) {
+    server_->Shutdown(std::chrono::system_clock::now() + duration);
 }
 
 template <typename Service>

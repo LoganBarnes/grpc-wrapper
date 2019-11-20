@@ -149,7 +149,7 @@ TEST_CASE("[grpcw-client] delayed_server") {
         REQUIRE(updater.state_queue.pop_front() == client::GrpcClientState::attempting_to_connect);
 
         {
-            server::ScopedGrpcServer server(std::make_shared<testing::TestService>(), server_address);
+            server::ScopedGrpcServer server(std::make_unique<testing::TestService>(), server_address);
             REQUIRE(updater.state_queue.pop_front() == client::GrpcClientState::connected);
         }
         // Server is deleted
@@ -164,7 +164,7 @@ TEST_CASE("[grpcw-client] delayed_server") {
 TEST_CASE("[grpcw-client] already_running_server") {
     StateUpdater updater;
     std::string server_address = "0.0.0.0:50053";
-    server::ScopedGrpcServer server(std::make_shared<testing::TestService>(), server_address);
+    server::ScopedGrpcServer server(std::make_unique<testing::TestService>(), server_address);
 
     {
         client::GrpcClient<testing::protocol::Test> client;
@@ -186,7 +186,7 @@ TEST_CASE("[grpcw-client] multiple_addresses") {
     std::string server_address1 = "0.0.0.0:50054";
     std::string server_address2 = "0.0.0.0:50055";
 
-    server::ScopedGrpcServer server1(std::make_shared<testing::TestService>(), server_address1);
+    server::ScopedGrpcServer server1(std::make_unique<testing::TestService>(), server_address1);
 
     {
         client::GrpcClient<testing::protocol::Test> client;
@@ -197,7 +197,7 @@ TEST_CASE("[grpcw-client] multiple_addresses") {
 
         check_connects(updater.state_queue);
 
-        server::ScopedGrpcServer server2(std::make_shared<testing::TestService>(), server_address2);
+        server::ScopedGrpcServer server2(std::make_unique<testing::TestService>(), server_address2);
 
         // Connect to server 2
         client.change_server(server_address2,
@@ -224,7 +224,7 @@ TEST_CASE("[grpcw-client] external_to_inprocess_and_back") {
     std::string server_address1 = "0.0.0.0:50056";
     std::string server_address2 = "0.0.0.0:50057";
 
-    server::ScopedGrpcServer server1(std::make_shared<testing::TestService>(), server_address1);
+    server::ScopedGrpcServer server1(std::make_unique<testing::TestService>(), server_address1);
 
     {
         client::GrpcClient<testing::protocol::Test> client;
@@ -235,10 +235,10 @@ TEST_CASE("[grpcw-client] external_to_inprocess_and_back") {
 
         check_connects(updater.state_queue);
 
-        server::ScopedGrpcServer ip_server(std::make_shared<testing::TestService>());
+        server::ScopedGrpcServer ip_server(std::make_unique<testing::TestService>());
 
         // Connect to server in-process server
-        client.change_server(ip_server.server());
+        client.change_server(ip_server.in_process_channel(client::default_channel_arguments()));
 
         // One last state update callback before we switch to the in-process server
         REQUIRE(updater.state_queue.pop_front() == client::GrpcClientState::not_connected);
@@ -265,7 +265,7 @@ TEST_CASE("[grpcw-client] external_to_inprocess_and_back") {
     std::string server_address1 = "0.0.0.0:50056";
     std::string server_address2 = "0.0.0.0:50057";
 
-    server::ScopedGrpcServer server1(std::make_shared<testing::TestService>(), server_address1);
+    server::ScopedGrpcServer server1(std::make_unique<testing::TestService>(), server_address1);
 
     {
         client::GrpcClient<testing::protocol::Test> client;
@@ -276,10 +276,10 @@ TEST_CASE("[grpcw-client] external_to_inprocess_and_back") {
 
         check_connects(updater.state_queue);
 
-        server::ScopedGrpcServer ip_server(std::make_shared<testing::TestService>());
+        server::ScopedGrpcServer ip_server(std::make_unique<testing::TestService>());
 
         // Connect to server in-process server
-        client.change_server(ip_server.server());
+        client.change_server(ip_server.in_process_channel());
 
         // One last state update callback before we switch to the in-process server
         REQUIRE(updater.state_queue.pop_front() == client::GrpcClientState::not_connected);

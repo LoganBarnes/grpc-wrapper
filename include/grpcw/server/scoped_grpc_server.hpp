@@ -23,7 +23,7 @@
 #pragma once
 
 // grpcw
-#include "grpcw/forward_declarations.hpp"
+#include "grpcw/server/grpc_server.hpp"
 
 // third-party
 #include <grpc++/channel.h>
@@ -38,19 +38,17 @@ namespace server {
 
 class ScopedGrpcServer {
 public:
-    /**
-     * @brief The server will be running when the constructor finishes
-     */
-    explicit ScopedGrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address = "");
+    /// \brief Builds a GrpcServer and runs it in a separate thread.
+    explicit ScopedGrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address = "");
     ~ScopedGrpcServer();
 
     /**
      * @brief This can be used to create in-process clients
      */
-    grpc::Server& server();
+    auto in_process_channel(const grpc::ChannelArguments& channel_arguments = {}) -> std::shared_ptr<grpc::Channel>;
 
 private:
-    std::unique_ptr<GrpcServer> server_;
+    GrpcServer server_;
     std::thread run_thread_;
 };
 

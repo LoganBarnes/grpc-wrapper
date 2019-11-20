@@ -29,7 +29,7 @@ namespace grpcw {
 namespace testing {
 
 TestServer::TestServer(const std::string& server_address)
-    : server_(new server::GrpcServer(std::make_shared<TestService>(), server_address)),
+    : server_(std::make_unique<server::GrpcServer>(std::make_unique<TestService>(), server_address)),
       run_thread_([&] { server_->run(); }) {}
 
 TestServer::~TestServer() {
@@ -38,8 +38,7 @@ TestServer::~TestServer() {
 }
 
 std::shared_ptr<grpc::Channel> TestServer::inprocess_channel() {
-    grpc::ChannelArguments channel_arguments;
-    return server_->server()->InProcessChannel(channel_arguments);
+    return server_->in_process_channel();
 }
 
 } // namespace testing
@@ -75,7 +74,7 @@ TEST_CASE("[grpcw-test-util] run_test_server_and_check_echo_rpc_call") {
 
     grpc::Status status = stub->echo(&context, request, &response);
 
-    // Check the server recieved the message and responded with the same message
+    // Check the server received the message and responded with the same message
     CHECK(status.ok());
     CHECK(response.msg() == test_msg);
 }

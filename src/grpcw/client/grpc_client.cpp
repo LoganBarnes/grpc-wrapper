@@ -20,39 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#pragma once
-
-#include <grpc++/server.h>
+#include "grpcw/client/grpc_client.hpp"
 
 namespace grpcw {
-namespace server {
+namespace client {
 
-class GrpcServer {
-public:
-    /// \brief Builds a grpc::Server with the provided address.
-    explicit GrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address = "");
-    ~GrpcServer();
-
-    /**
-     * @brief Blocks until server is shutdown and all rpc calls terminate
-     */
-    void run();
-
-    template <typename TimePoint>
-    void shutdown(const TimePoint& deadline);
-    void shutdown();
-
-    auto in_process_channel(const grpc::ChannelArguments& channel_arguments = {}) -> std::shared_ptr<grpc::Channel>;
-
-private:
-    std::unique_ptr<grpc::Service> service_;
-    std::unique_ptr<grpc::Server> server_;
-};
-
-template <typename TimePoint>
-void GrpcServer::shutdown(const TimePoint& deadline) {
-    server_->Shutdown(deadline);
+auto default_channel_arguments() -> grpc::ChannelArguments {
+    grpc::ChannelArguments arguments;
+    arguments.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
+    return arguments;
 }
 
-} // namespace server
+} // namespace client
 } // namespace grpcw

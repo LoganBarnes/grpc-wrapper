@@ -23,6 +23,7 @@
 #include "grpcw/server/grpc_server.hpp"
 
 // third-party
+#include <grpc++/impl/codegen/service_type.h>
 #include <grpc++/server_builder.h>
 
 // standard
@@ -31,7 +32,7 @@
 namespace grpcw {
 namespace server {
 
-GrpcServer::GrpcServer(std::shared_ptr<grpc::Service> service, const std::string& server_address)
+GrpcServer::GrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address)
     : service_(std::move(service)) {
 
     grpc::ServerBuilder builder;
@@ -41,9 +42,10 @@ GrpcServer::GrpcServer(std::shared_ptr<grpc::Service> service, const std::string
     if (not server_address.empty()) {
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     }
-
     server_ = builder.BuildAndStart();
 }
+
+GrpcServer::~GrpcServer() = default;
 
 void GrpcServer::run() {
     server_->Wait();
@@ -53,16 +55,8 @@ void GrpcServer::shutdown() {
     server_->Shutdown();
 }
 
-std::shared_ptr<grpc::Service>& GrpcServer::service() {
-    return service_;
-}
-
-const std::shared_ptr<grpc::Service>& GrpcServer::service() const {
-    return service_;
-}
-
-std::unique_ptr<grpc::Server>& GrpcServer::server() {
-    return server_;
+auto GrpcServer::in_process_channel(const grpc::ChannelArguments& channel_arguments) -> std::shared_ptr<grpc::Channel> {
+    return server_->InProcessChannel(channel_arguments);
 }
 
 } // namespace server
