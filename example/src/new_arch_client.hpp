@@ -22,30 +22,42 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+// grpcw
+#include "grpcw/forward_declarations.hpp"
+
+// generated
+#include <example.grpc.pb.h>
+
+// external
+#include <grpc++/channel.h>
+
 // standard
-#include <memory>
-#include <ostream>
-#include <unordered_map>
+#include <thread>
 
-enum class TagLabel {
-    ClientConnectionChange,
-    ServerNewRpc,
-    ServerWriting,
-    ServerDone,
+namespace example {
+
+class ExampleClient {
+public:
+    explicit ExampleClient(const std::string& host_address);
+
+    std::string get_server_time_now(const protocol::Format& format);
+
+    void toggle_streaming();
+
+private:
+    using Service = protocol::Clock;
+
+    std::mutex stream_mutex;
+    std::unique_ptr<grpc::ClientContext> stream_context_;
+    std::unique_ptr<grpc::ClientReader<example::protocol::Time>> stream_;
+    std::thread stream_thread_;
+
+    std::shared_ptr<grpc::Channel> channel_;
+    std::unique_ptr<typename Service::Stub> stub_;
+
+    using UsageFunc = std::function<void(typename Service::Stub&)>;
+
+    auto use_stub(const UsageFunc& usage_func) -> bool;
 };
 
-struct Tag {
-    void* data;
-    TagLabel label;
-
-    Tag(void* d, TagLabel l);
-};
-
-::std::ostream& operator<<(::std::ostream& os, const Tag& tag);
-
-namespace detail {
-
-void* make_tag(void* data, TagLabel label, std::unordered_map<void*, std::unique_ptr<Tag>>* tags);
-Tag get_tag(void* key, std::unordered_map<void*, std::unique_ptr<Tag>>* tags);
-
-} // namespace detail
+} // namespace example

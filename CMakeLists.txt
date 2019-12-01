@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 project(gRPC-Wrapper LANGUAGES CXX)
 
 option(GRPCW_BUILD_TESTS "Build unit tests" OFF)

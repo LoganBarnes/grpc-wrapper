@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "example_server.hpp"
+#include "new_arch_server.hpp"
 
 // grpcw
 #include "grpcw/server/grpc_async_server.hpp"
@@ -179,7 +179,6 @@ using AsyncServerStreamFunc = void (Service::*)(grpc::ServerContext* context,
                                                 void*);
 
 struct Tagger {
-
     auto make_tag(void* data, TagLabel label) -> void* {
         std::lock_guard<std::mutex> lock(mutex_);
         return detail::make_tag(data, label, &tags_);
@@ -251,7 +250,7 @@ struct UnaryRpcHandler : NewRpc, UnaryWriter<Response> {
     }
 
     auto queue_handler() -> void override {
-        auto tag = tagger_.make_tag(this, TagLabel::NewRpc);
+        auto tag = tagger_.make_tag(this, TagLabel::ServerNewRpc);
         (service_
          .*register_rpc_)(&connection_.context, &connection_.request, &connection_.responder, &queue_, &queue_, tag);
     }
@@ -266,13 +265,13 @@ struct UnaryRpcHandler : NewRpc, UnaryWriter<Response> {
      */
     auto finish(const Response& response, const grpc::Status& status) -> void override {
         std::lock_guard<std::mutex> lock(mutex_);
-        auto tag = tagger_.make_tag(this, TagLabel::Done);
+        auto tag = tagger_.make_tag(this, TagLabel::ServerDone);
         connection_.responder.Finish(response, status, tag);
     }
 
     auto finish_with_error(const grpc::Status& status) -> void override {
         std::lock_guard<std::mutex> lock(mutex_);
-        auto tag = tagger_.make_tag(this, TagLabel::Done);
+        auto tag = tagger_.make_tag(this, TagLabel::ServerDone);
         connection_.responder.FinishWithError(status, tag);
     }
     /*
@@ -363,20 +362,24 @@ int main(int argc, const char* argv[]) {
             if (completed_successfully) {
                 switch (tag.label) {
 
-                case TagLabel::NewRpc: {
+                case TagLabel::ServerNewRpc: {
                     auto rpc = static_cast<NewRpc*>(tag.data);
                     queue_rpc(rpc->clone(), data);
                     rpc->invoke_user_callback();
 
                 } break;
 
-                case TagLabel::Writing:
+                case TagLabel::ServerWriting:
                     break;
 
-                case TagLabel::Done:
+                case TagLabel::ServerDone:
                     data.erase(tag.data);
                     break;
-                }
+
+                case TagLabel::ClientConnectionChange:
+                    throw std::runtime_error("Don't use client tags in the server ya dummy");
+
+                } // end switch
 
             } else {
                 data.erase(tag.data);
@@ -388,6 +391,8 @@ int main(int argc, const char* argv[]) {
 
     grpc::Server* server_ptr = nullptr;
     grpc::ServerCompletionQueue* server_queue_ptr = nullptr;
+
+    // TODO: Add conditional_variable to make sure the pointers get set before continuing
 
     initialization_queue.emplace_back([server_ptr = &server_ptr,
                                        server_queue_ptr = &server_queue_ptr,
@@ -425,6 +430,8 @@ int main(int argc, const char* argv[]) {
      */
     initialization_queue.emplace_back(nullptr);
 
+    std::cout << "Server running..." << std::endl;
+
     /*
      * Clean up after enter
      */
@@ -436,6 +443,8 @@ int main(int argc, const char* argv[]) {
         server_queue_ptr->Shutdown();
     }
     run_thread.join();
+
+    std::cout << "Server exiting." << std::endl;
 
     return 0;
 }

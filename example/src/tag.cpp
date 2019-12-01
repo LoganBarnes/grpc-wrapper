@@ -33,16 +33,20 @@ Tag::Tag(void* d, TagLabel l) : data(d), label(l) {}
 
     switch (tag.label) {
 
-    case TagLabel::NewRpc:
-        os << "NewRpc";
+    case TagLabel::ClientConnectionChange:
+        os << "ClientConnectionChange";
         break;
 
-    case TagLabel::Done:
-        os << "Done";
+    case TagLabel::ServerNewRpc:
+        os << "ServerNewRpc";
         break;
 
-    case TagLabel::Writing:
-        os << "Writing";
+    case TagLabel::ServerDone:
+        os << "ServerDone";
+        break;
+
+    case TagLabel::ServerWriting:
+        os << "ServerWriting";
         break;
     }
     return os << '}';

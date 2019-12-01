@@ -28,32 +28,45 @@ create_proto_library(
 
 add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
 add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
-add_executable(new-arch-test
-        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_test
-        ${CMAKE_CURRENT_LIST_DIR}/src/tag
+add_executable(new_arch_server
+        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_server.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_server.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/tag.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/tag.hpp
+        )
+add_executable(new_arch_client
+        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_client.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_client.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/tag.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/tag.hpp
         )
 
 target_link_libraries(example-client PRIVATE grpc_wrapper example_protos)
 target_link_libraries(example-server PRIVATE grpc_wrapper example_protos)
-target_link_libraries(new-arch-test PRIVATE grpc_wrapper example_protos)
+target_link_libraries(new_arch_server PRIVATE grpc_wrapper example_protos)
+target_link_libraries(new_arch_client PRIVATE grpc_wrapper example_protos)
 
 target_compile_options(example-client PRIVATE ${GRPCW_COMPILE_FLAGS})
 target_compile_options(example-server PRIVATE ${GRPCW_COMPILE_FLAGS})
-target_compile_options(new-arch-test PRIVATE ${GRPCW_COMPILE_FLAGS})
+target_compile_options(new_arch_server PRIVATE ${GRPCW_COMPILE_FLAGS})
+target_compile_options(new_arch_client PRIVATE ${GRPCW_COMPILE_FLAGS})
 
 if (GRPCW_THREAD_SANTIZING)
     target_compile_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_compile_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_compile_options(new-arch-test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_compile_options(new_arch_server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_compile_options(new_arch_client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_link_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_link_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_link_options(new-arch-test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_link_options(new_arch_server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_link_options(new_arch_client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
 endif ()
 
 set_target_properties(
         example-client
         example-server
-        new-arch-test
+        new_arch_server
+        new_arch_client
         PROPERTIES
         # C++ flags
         CXX_STANDARD ${GRPCW_CXX_STANDARD}
