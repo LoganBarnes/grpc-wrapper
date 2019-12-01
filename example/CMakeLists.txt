@@ -28,23 +28,32 @@ create_proto_library(
 
 add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
 add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
+add_executable(new-arch-test
+        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_test
+        ${CMAKE_CURRENT_LIST_DIR}/src/tag
+        )
 
 target_link_libraries(example-client PRIVATE grpc_wrapper example_protos)
 target_link_libraries(example-server PRIVATE grpc_wrapper example_protos)
+target_link_libraries(new-arch-test PRIVATE grpc_wrapper example_protos)
 
 target_compile_options(example-client PRIVATE ${GRPCW_COMPILE_FLAGS})
 target_compile_options(example-server PRIVATE ${GRPCW_COMPILE_FLAGS})
+target_compile_options(new-arch-test PRIVATE ${GRPCW_COMPILE_FLAGS})
 
 if (GRPCW_THREAD_SANTIZING)
     target_compile_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_compile_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_compile_options(new-arch-test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_link_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_link_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
+    target_link_options(new-arch-test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
 endif ()
 
 set_target_properties(
         example-client
         example-server
+        new-arch-test
         PROPERTIES
         # C++ flags
         CXX_STANDARD ${GRPCW_CXX_STANDARD}

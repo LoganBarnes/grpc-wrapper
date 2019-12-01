@@ -89,9 +89,7 @@ NonStreamRpcHandler<Service, Request, Response, Callback>::NonStreamRpcHandler(
     grpc::ServerCompletionQueue& server_queue,
     AsyncNoStreamFunc<Service, Request, Response> stream_func,
     Callback callback)
-    : service_(service), server_queue_(server_queue), stream_func_(stream_func), callback_(std::move(callback)) {
-    activate_next();
-}
+    : service_(service), server_queue_(server_queue), stream_func_(stream_func), callback_(std::move(callback)) {}
 
 template <typename Service, typename Request, typename Response, typename Callback>
 NonStreamRpcHandler<Service, Request, Response, Callback>::~NonStreamRpcHandler() {

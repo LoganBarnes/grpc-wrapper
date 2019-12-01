@@ -117,8 +117,6 @@ StreamRpcHandler<Service, Request, Response>::StreamRpcHandler(
     : service_(service), server_queue_(server_queue), stream_func_(stream_func) {
 
     sync_thread_ = std::thread(&StreamRpcHandler<Service, Request, Response>::run_synchronization, this);
-
-    activate_next();
 }
 
 template <typename Service, typename Request, typename Response>

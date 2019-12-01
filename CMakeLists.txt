@@ -92,12 +92,16 @@ file(GLOB_RECURSE GRPCW_SOURCE_FILES
         ${CMAKE_CURRENT_LIST_DIR}/src/grpcw/*
         )
 
+set(GRPCW_PUBLIC_LIB_DEPS
+        protobuf::libprotobuf
+        gRPC::grpc++
+        ${CMAKE_DL_LIBS}
+        Threads::Threads
+        )
+
 add_library(${GRPCW_LIBRARY} ${GRPCW_SOURCE_FILES})
 target_link_libraries(${GRPCW_LIBRARY}
-        PUBLIC protobuf::libprotobuf
-        PUBLIC gRPC::grpc++
-        PUBLIC ${CMAKE_DL_LIBS}
-        PUBLIC Threads::Threads
+        PUBLIC ${GRPCW_PUBLIC_LIB_DEPS}
         PRIVATE doctest
         )
 target_compile_options(${GRPCW_LIBRARY} PRIVATE ${GRPCW_COMPILE_FLAGS})
@@ -142,7 +146,7 @@ if (GRPCW_BUILD_TESTS)
     add_executable(${GRPCW_TESTS} ${GRPCW_SOURCE_FILES} ${GRPCW_TEST_FILES})
     target_link_libraries(${GRPCW_TESTS}
             PRIVATE doctest_with_main
-            PRIVATE ${GRPCW_LIBRARY}
+            PRIVATE ${GRPCW_PUBLIC_LIB_DEPS}
             PRIVATE testing_protos
             )
     target_compile_options(${GRPCW_TESTS} PRIVATE ${GRPCW_COMPILE_FLAGS})
