@@ -63,23 +63,23 @@ ExampleServer::ExampleServer(const std::string& server_address)
     /*
      * Getters for current state
      */
-    server_->register_async(&Service::RequestGetServerTimeNow,
-                            [this](const protocol::FormatRequest& request, protocol::Time* time) {
-                                return this->get_time(request, time);
-                            });
-
-    keep_ticking_.store(true);
-
-    ticker_ = std::thread([this] {
-        protocol::FormatRequest request;
-        protocol::Time time;
-
-        while (keep_ticking_) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            get_time(request, &time);
-            time_stream_->write(time);
-        }
-    });
+//    server_->register_async(&Service::RequestGetServerTimeNow,
+//                            [this](const protocol::FormatRequest& request, protocol::Time* time) {
+//                                return this->get_time(request, time);
+//                            });
+//
+//    keep_ticking_.store(true);
+//
+//    ticker_ = std::thread([this] {
+//        protocol::FormatRequest request;
+//        protocol::Time time;
+//
+//        while (keep_ticking_) {
+//            std::this_thread::sleep_for(std::chrono::seconds(1));
+//            get_time(request, &time);
+//            time_stream_->write(time);
+//        }
+//    });
 }
 
 ExampleServer::~ExampleServer() {
@@ -92,35 +92,6 @@ ExampleServer::~ExampleServer() {
 
 grpc::Server& ExampleServer::server() {
     return server_->server();
-}
-
-grpc::Status ExampleServer::get_time(const protocol::FormatRequest& request, protocol::Time* time) {
-    std::stringstream ss;
-
-    auto time_since_server_start = std::chrono::system_clock::now() - server_start_time_;
-
-    switch (request.format()) {
-    case protocol::COMPOUND:
-        make_pretty_time_string(ss, time_since_server_start);
-        break;
-    case protocol::HOURS:
-        ss << std::chrono::duration_cast<std::chrono::hours>(time_since_server_start).count() << "h";
-        break;
-    case protocol::MINUTES:
-        ss << std::chrono::duration_cast<std::chrono::minutes>(time_since_server_start).count() << "m";
-        break;
-    case protocol::SECONDS:
-        ss << std::chrono::duration_cast<std::chrono::seconds>(time_since_server_start).count() << "s";
-        break;
-
-    // We can safely ignore these?
-    case protocol::Format_INT_MIN_SENTINEL_DO_NOT_USE_:
-    case protocol::Format_INT_MAX_SENTINEL_DO_NOT_USE_:
-        break;
-    }
-
-    time->set_display_time(ss.str());
-    return grpc::Status::OK;
 }
 
 namespace {
@@ -377,6 +348,7 @@ int main(int argc, const char* argv[]) {
                     break;
 
                 case TagLabel::ClientConnectionChange:
+                case TagLabel::ClientFinished:
                     throw std::runtime_error("Don't use client tags in the server ya dummy");
 
                 } // end switch

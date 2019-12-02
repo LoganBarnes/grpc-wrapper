@@ -56,8 +56,6 @@ private:
     std::atomic_bool keep_ticking_;
 
     std::unique_ptr<grpcw::server::GrpcAsyncServer<Service>> server_;
-
-    grpc::Status get_time(const protocol::FormatRequest& request, protocol::Time* time);
 };
 
 } // namespace example

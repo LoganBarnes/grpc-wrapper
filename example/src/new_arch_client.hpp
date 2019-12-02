@@ -39,6 +39,7 @@ namespace example {
 class ExampleClient {
 public:
     explicit ExampleClient(const std::string& host_address);
+    ~ExampleClient();
 
     std::string get_server_time_now(const protocol::Format& format);
 
@@ -54,10 +55,6 @@ private:
 
     std::shared_ptr<grpc::Channel> channel_;
     std::unique_ptr<typename Service::Stub> stub_;
-
-    using UsageFunc = std::function<void(typename Service::Stub&)>;
-
-    auto use_stub(const UsageFunc& usage_func) -> bool;
 };
 
 } // namespace example

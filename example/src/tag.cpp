@@ -37,6 +37,10 @@ Tag::Tag(void* d, TagLabel l) : data(d), label(l) {}
         os << "ClientConnectionChange";
         break;
 
+    case TagLabel::ClientFinished:
+        os << "ClientFinished";
+        break;
+
     case TagLabel::ServerNewRpc:
         os << "ServerNewRpc";
         break;
