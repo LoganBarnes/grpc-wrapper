@@ -26,14 +26,15 @@ create_proto_library(
         ${CMAKE_BINARY_DIR}/generated/protos
 )
 
+file(GLOB_RECURSE GRPCW_TMP_SERVER_SOURCE_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/*
+        )
+add_executable(new_arch_server ${GRPCW_TMP_SERVER_SOURCE_FILES})
+
 add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
 add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
-add_executable(new_arch_server
-        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_server.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_server.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/tag.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/tag.hpp
-        )
 add_executable(new_arch_client
         ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_client.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/new_arch_client.hpp
