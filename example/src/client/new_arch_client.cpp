@@ -23,11 +23,12 @@
 #include "new_arch_client.hpp"
 
 // grpcw
+#include "../shared/tag.hpp"
+#include "client.hpp"
 #include "grpcw/client/grpc_client.hpp"
 #include "grpcw/util/blocking_queue.hpp"
-#include "tag.hpp"
 
-//#define NEW_WAY
+#define NEW_WAY
 
 inline std::string to_string(const grpc_connectivity_state& state) {
     switch (state) {
@@ -113,132 +114,6 @@ void ExampleClient::toggle_streaming() {
 
 } // namespace example
 
-#ifdef NEW_WAY
-
-namespace {
-
-template <typename Stub, typename Request, typename Response>
-using AsyncUnaryFunc = std::unique_ptr<grpc::ClientAsyncResponseReader<Response>> (Stub::*)(grpc::ClientContext*,
-                                                                                            const Request&,
-                                                                                            grpc::CompletionQueue*);
-
-struct Tagger {
-    auto make_tag(void* data, TagLabel label) -> void* {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return detail::make_tag(data, label, &tags_);
-    }
-
-    auto get_tag(void* key) -> Tag {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return detail::get_tag(key, &tags_);
-    }
-
-public:
-    std::mutex mutex_;
-    std::unordered_map<void*, std::unique_ptr<Tag>> tags_;
-};
-
-template <typename Request, typename Response>
-struct UnaryRpcConnection {
-    grpc::ClientContext context;
-    Response response;
-    grpc::Status status;
-    std::unique_ptr<grpc::ClientAsyncResponseReader<Response>> reader;
-};
-
-struct Rpc {
-    virtual ~Rpc() = default;
-};
-
-struct UnaryRpc : virtual Rpc {
-    ~UnaryRpc() override = default;
-    virtual auto invoke_user_callback() -> void = 0;
-};
-
-template <typename Request>
-struct UnaryWriter : virtual Rpc {
-    ~UnaryWriter() override = default;
-    virtual auto send(const Request& request) -> void = 0;
-};
-
-template <typename Stub, typename Request, typename Response>
-struct UnaryRpcHandler : UnaryRpc, UnaryWriter<Request> {
-    using OnFinish = std::function<void(const grpc::Status&, const Response&)>;
-
-    UnaryRpcHandler(grpc::Channel& channel,
-                    Stub& stub,
-                    grpc::CompletionQueue& queue,
-                    Tagger& tagger,
-                    std::mutex& client_mutex,
-                    AsyncUnaryFunc<Stub, Request, Response> rpc,
-                    OnFinish on_finish)
-        : channel_(channel),
-          stub_(stub),
-          queue_(queue),
-          tagger_(tagger),
-          client_mutex_(client_mutex),
-          rpc_(rpc),
-          on_finish_(std::move(on_finish)) {}
-
-    ~UnaryRpcHandler() override = default;
-
-    /*
-     * START UnaryRpc
-     */
-    auto invoke_user_callback() -> void override { on_finish_(connection_.status, connection_.response); }
-    /*
-     * END UnaryRpc
-     */
-
-    /*
-     * START UnaryWriter
-     */
-    auto send(const Request& request) -> void override {
-        std::lock_guard<std::mutex> lock(client_mutex_);
-        connection_.reader = (stub_.*rpc_)(&connection_.context, request, &queue_);
-        auto tag = tagger_.make_tag(this, TagLabel::ClientFinished);
-        connection_.reader->Finish(&connection_.response, &connection_.status, tag);
-    }
-    /*
-     * END UnaryWriter
-     */
-
-private:
-    grpc::Channel& channel_;
-    Stub& stub_;
-    grpc::CompletionQueue& queue_;
-    Tagger& tagger_;
-
-    std::mutex& client_mutex_;
-
-    UnaryRpcConnection<Request, Response> connection_;
-    AsyncUnaryFunc<Stub, Request, Response> rpc_;
-    OnFinish on_finish_;
-};
-
-template <typename Stub, typename Request, typename Response>
-auto make_unique_unary_rpc(grpc::Channel& channel,
-                           Stub& stub,
-                           grpc::CompletionQueue& queue,
-                           Tagger& tagger,
-                           std::mutex& client_mutex,
-                           AsyncUnaryFunc<Stub, Request, Response> register_rpc,
-                           typename UnaryRpcHandler<Stub, Request, Response>::OnFinish on_finish)
-    -> std::unique_ptr<UnaryRpcHandler<Stub, Request, Response>> {
-
-    return std::make_unique<UnaryRpcHandler<Stub, Request, Response>>(channel,
-                                                                      stub,
-                                                                      queue,
-                                                                      tagger,
-                                                                      client_mutex,
-                                                                      register_rpc,
-                                                                      std::move(on_finish));
-}
-
-} // namespace
-
-#endif
-
 int main(int argc, const char* argv[]) {
     std::string host_address = "0.0.0.0:50055";
 
@@ -303,7 +178,8 @@ int main(int argc, const char* argv[]) {
 #else
 
     using Service = example::protocol::Clock;
-
+    grpcw::client::Client<Service> client(host_address);
+#if 0
     using InitFunc = std::function<void(grpc::Channel&,
                                         typename Service::Stub&,
                                         grpc::CompletionQueue&,
@@ -465,6 +341,8 @@ int main(int argc, const char* argv[]) {
         std::lock_guard<std::mutex> lock(client_mutex);
         queue_ptr->Shutdown();
     }
+#endif
+    std::cin.ignore();
 #endif
 
     return 0;

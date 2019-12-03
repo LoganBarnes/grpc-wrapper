@@ -23,9 +23,9 @@
 #pragma once
 
 // project
+#include "../shared/tagger.hpp"
 #include "connections.hpp"
 #include "rpc.hpp"
-#include "tagger.hpp"
 
 // third-party
 #include <grpc++/support/status.h>

@@ -27,7 +27,7 @@ option(GRPCW_BUILD_TESTS "Build unit tests" OFF)
 option(GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
 option(GRPCW_USE_DEV_FLAGS "Compile with all the flags" OFF)
 option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been found by CMake" OFF)
-option(GRPCW_THREAD_SANTIZING "Add thread sanitizer flags (only in debug mode)" OFF)
+option(GRPCW_THREAD_SANITIZATION "Add thread sanitizer flags (only in debug mode)" OFF)
 
 #############################
 ### Project Configuration ###
@@ -119,7 +119,7 @@ else ()
             )
 endif ()
 
-if (GRPCW_THREAD_SANTIZING)
+if (GRPCW_THREAD_SANITIZATION)
     target_compile_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     target_link_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
 endif ()
@@ -151,7 +151,7 @@ if (GRPCW_BUILD_TESTS)
             )
     target_compile_options(${GRPCW_TESTS} PRIVATE ${GRPCW_COMPILE_FLAGS})
 
-    if (GRPCW_THREAD_SANTIZING)
+    if (GRPCW_THREAD_SANITIZATION)
         target_compile_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
         target_link_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
     endif ()
