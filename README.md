@@ -5,7 +5,21 @@ gRPC Wrapper
 [![MIT License][license-badge]][license-link]
 [![Docs][docs-badge]][docs-link]
 
-(Incomplete) C++ wrapper classes around the [gRPC][grpc-link].
+(Incomplete) C++ wrapper classes around [gRPC][grpc-link].
+
+### Development
+
+```bash
+# All from root dir or things may break
+
+# Before all subtree commands
+git remote add -f ltb-whatev git@github.com:LoganBarnes/ltb-whatev.git
+
+# Subtree commands use form: subtree-name remote-name branch-name
+git subtree add --prefix ltb-whatev ltb-whatev master --squash
+git subtree push --prefix ltb-whatev ltb-whatev master
+git subtree pull --prefix ltb-whatev ltb-whatev master --squash
+```
 
 [travis-badge]: https://travis-ci.org/LoganBarnes/grpc-wrapper.svg?branch=master
 [travis-link]: https://travis-ci.org/LoganBarnes/grpc-wrapper
