@@ -24,6 +24,7 @@ function(ltb_add_library target cxx_standard)
     # Add the library with custom compile flags and link the testing library
     add_library(${target} ${ARGN})
     target_compile_options(${target} PRIVATE ${LTB_COMPILE_FLAGS})
+    target_link_options(${target} PRIVATE ${LTB_LINK_FLAGS})
     target_compile_definitions(${target} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 
     ltb_set_properties(${target} ${cxx_standard})
@@ -35,6 +36,7 @@ function(ltb_add_library target cxx_standard)
 
         target_link_libraries(${test_target} PRIVATE LtbExternal::DoctestWithMain ltb_testing)
         target_compile_options(${test_target} PRIVATE ${LTB_COMPILE_FLAGS})
+        target_link_options(${test_target} PRIVATE ${LTB_LINK_FLAGS})
 
         add_test(NAME ${target}_tests COMMAND ${test_target})
 
@@ -63,23 +65,5 @@ function(ltb_include_directories target)
     if (${LTB_BUILD_TESTS})
         set(test_target test_${target})
         target_include_directories(${test_target} ${ARGN})
-    endif ()
-endfunction()
-
-function(ltb_compile_options target)
-    target_compile_options(${target} ${ARGN})
-
-    if (${LTB_BUILD_TESTS})
-        set(test_target test_${target})
-        target_compile_options(${test_target} ${ARGN})
-    endif ()
-endfunction()
-
-function(ltb_link_options target)
-    target_link_options(${target} ${ARGN})
-
-    if (${LTB_BUILD_TESTS})
-        set(test_target test_${target})
-        target_link_options(${test_target} ${ARGN})
     endif ()
 endfunction()

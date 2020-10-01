@@ -63,15 +63,24 @@ function(grpc_generate_cpp _generated_files)
 
         get_filename_component(PROTO_FILE_DIRECTORY ${PROTO_FILE} DIRECTORY)
         get_filename_component(PROTO_FILE_NAME_WE ${PROTO_FILE} NAME_WE)
-        list(APPEND _GENERATED_FILES
+        list(APPEND _PB_GENERATED_FILES
                 ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.pb.h
                 ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.pb.cc
+                )
+        list(APPEND _GRPC_PB_GENERATED_FILES
                 ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.grpc.pb.h
                 ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.grpc.pb.cc
                 )
     endforeach ()
 
-    list(TRANSFORM _GENERATED_FILES REPLACE "${PRIMARY_IMPORT_DIR}" "")
+    list(TRANSFORM _PB_GENERATED_FILES REPLACE "${PRIMARY_IMPORT_DIR}" "${GRPC_GEN_CPP_CPP_OUT}")
+    list(TRANSFORM _GRPC_PB_GENERATED_FILES REPLACE "${PRIMARY_IMPORT_DIR}" "${GRPC_GEN_CPP_GRPC_OUT}")
+
+    list(APPEND
+            _GENERATED_FILES
+            ${_PB_GENERATED_FILES}
+            ${_GRPC_PB_GENERATED_FILES}
+            )
 
     add_custom_command(
             OUTPUT ${_GENERATED_FILES}

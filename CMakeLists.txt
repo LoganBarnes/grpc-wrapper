@@ -75,17 +75,6 @@ ltb_include_directories(ltb_grpcw
         $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
         )
 
-if (${LTB_THREAD_SANITIZATION})
-    ltb_compile_options(ltb_grpcw
-            PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
-            )
-    ltb_link_options(ltb_grpcw
-            PRIVATE
-            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
-            )
-endif ()
-
 add_library(Ltb::grpcw ALIAS ltb_grpcw)
 
 ###############

@@ -25,16 +25,36 @@ create_proto_library(ltb_grpcw_example_protos
         ${CMAKE_BINARY_DIR}/generated/protos
         )
 
-ltb_add_executable(example-client
+ltb_add_executable(example_client
         17
         ${CMAKE_CURRENT_LIST_DIR}/src/example_client.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/example_client.hpp
         )
-ltb_add_executable(example-server
+ltb_add_executable(example_server
         17
         ${CMAKE_CURRENT_LIST_DIR}/src/example_server.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/example_server.hpp
         )
 
-target_link_libraries(example-client PRIVATE ltb_grpcw_example_protos)
-target_link_libraries(example-server PRIVATE ltb_grpcw_example_protos)
+target_link_libraries(example_client PUBLIC ltb_grpcw_example_protos)
+target_link_libraries(example_server PUBLIC ltb_grpcw_example_protos)
+
+file(GLOB_RECURSE GRPCW_TMP_SERVER_SOURCE_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/*
+        ${CMAKE_CURRENT_LIST_DIR}/src/shared/*
+        )
+
+file(GLOB_RECURSE GRPCW_TMP_CLIENT_SOURCE_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_LIST_DIR}/src/client/*
+        ${CMAKE_CURRENT_LIST_DIR}/src/shared/*
+        )
+
+add_executable(new_arch_server ${GRPCW_TMP_SERVER_SOURCE_FILES})
+add_executable(new_arch_client ${GRPCW_TMP_CLIENT_SOURCE_FILES})
+
+target_link_libraries(new_arch_server PUBLIC ltb_grpcw_example_protos)
+target_link_libraries(new_arch_client PUBLIC ltb_grpcw_example_protos)

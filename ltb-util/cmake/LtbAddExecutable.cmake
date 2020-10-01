@@ -23,7 +23,8 @@
 function(ltb_add_executable target cxx_standard main_file)
     # Add a library with custom compile flags and disable testing
     add_library(${target} ${ARGN})
-    target_compile_options(${target} PUBLIC ${LTB_COMPILE_FLAGS})
+    target_compile_options(${target} PRIVATE ${LTB_COMPILE_FLAGS})
+    target_link_options(${target} PRIVATE ${LTB_LINK_FLAGS})
     target_compile_definitions(${target} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 
     ltb_set_properties(${target} ${cxx_standard})
@@ -34,17 +35,19 @@ function(ltb_add_executable target cxx_standard main_file)
 
     target_link_libraries(${exec_target} PRIVATE ${target})
     target_compile_options(${exec_target} PRIVATE ${LTB_COMPILE_FLAGS})
+    target_link_options(${exec_target} PRIVATE ${LTB_LINK_FLAGS})
     target_compile_definitions(${exec_target} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 
     ltb_set_properties(${exec_target} ${cxx_standard})
 
-    if (LTB_BUILD_TESTS)
+    if (${LTB_BUILD_TESTS})
         # Create an executable to run the tests
         set(test_target test_${target})
         add_executable(${test_target} ${ARGN})
 
         target_link_libraries(${test_target} PRIVATE LtbExternal::DoctestWithMain ltb_testing)
-        target_compile_options(${test_target} PUBLIC ${LTB_COMPILE_FLAGS})
+        target_compile_options(${test_target} PRIVATE ${LTB_COMPILE_FLAGS})
+        target_link_options(${test_target} PRIVATE ${LTB_LINK_FLAGS})
 
         add_test(NAME ${target}_tests COMMAND ${test_target})
 
@@ -55,5 +58,5 @@ function(ltb_add_executable target cxx_standard main_file)
         endif ()
 
         ltb_set_properties(${test_target} ${cxx_standard})
-    endif (LTB_BUILD_TESTS)
+    endif ()
 endfunction()
