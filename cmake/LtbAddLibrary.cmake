@@ -33,7 +33,7 @@ function(ltb_add_library target cxx_standard)
         set(test_target test_${target})
         add_executable(${test_target} ${ARGN})
 
-        target_link_libraries(${test_target} PRIVATE doctest_with_main ltb_testing)
+        target_link_libraries(${test_target} PRIVATE LtbExternal::DoctestWithMain ltb_testing)
         target_compile_options(${test_target} PRIVATE ${LTB_COMPILE_FLAGS})
 
         add_test(NAME ${target}_tests COMMAND ${test_target})

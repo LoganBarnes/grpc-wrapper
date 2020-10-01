@@ -23,34 +23,33 @@
 #pragma once
 
 // external
-#include <cuda_runtime.h>
+#include <optix_stubs.h>
 
 // standard
 #include <exception>
 #include <sstream>
 #include <string>
 
-#define LTB_CUDA_CHECK(val) ::ltb::cuda::check((val), #val, __FILE__, __LINE__)
+#define LTB_OPTIX_CHECK(val) ::ltb::optix::check((val), #val, __FILE__, __LINE__)
 
-#define LTB_SAFE_CUDA_CHECK(val)                                                                                       \
+#define LTB_SAFE_OPTIX_CHECK(val)                                                                                      \
     {                                                                                                                  \
-        auto error_message = ::ltb::cuda::error_string((val), #val, __FILE__, __LINE__);                               \
+        auto error_message = ::ltb::optix::error_string((val), #val, __FILE__, __LINE__);                              \
         if (!error_message.empty()) {                                                                                  \
             return tl::make_unexpected(LTB_MAKE_ERROR(error_message));                                                 \
         }                                                                                                              \
     }
 
 namespace ltb {
-namespace cuda {
+namespace optix {
 
 template <typename T>
 auto error_string(T result, char const* const func, const char* const file, int const line) -> std::string {
-    if (result != cudaSuccess) {
+    if (result != OPTIX_SUCCESS) {
         std::stringstream error_str;
-        error_str << "CUDA error at " << file << ":" << line << "\n";
-        error_str << "\tcode=" << static_cast<unsigned int>(result) << "(" << cudaGetErrorString(result) << ")\n";
+        error_str << "OPTIX error at " << file << ":" << line << "\n";
+        error_str << "\tcode=" << static_cast<unsigned int>(result) << "(" << optixGetErrorString(result) << ")\n";
         error_str << "\t\"" << func << "\"";
-
         return error_str.str();
     }
     return "";
@@ -60,9 +59,9 @@ template <typename T>
 auto check(T result, char const* const func, const char* const file, int const line) -> void {
     auto error_message = error_string(result, func, file, line);
     if (!error_message.empty()) {
-        throw std::runtime_error(error_message);
+        throw std::runtime_error((error_message));
     }
 }
 
-} // namespace cuda
+} // namespace optix
 } // namespace ltb

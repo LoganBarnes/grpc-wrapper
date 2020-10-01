@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <cfloat>
 #include <limits>
 
 // This template class serves as a compile-time function from size to
@@ -72,7 +73,7 @@ public:
     //
     // As base/basictypes.h doesn't compile on Windows, we cannot use
     // uint32, uint64, and etc here.
-    typedef int Int;
+    typedef int          Int;
     typedef unsigned int UInt;
 };
 
@@ -81,12 +82,12 @@ template <>
 class TypeWithSize<8> {
 public:
 #if _MSC_VER
-    typedef __int64 Int;
-	typedef unsigned __int64 UInt;
+    typedef __int64          Int;
+    typedef unsigned __int64 UInt;
 #else
-    typedef long long Int;  // NOLINT
-    typedef unsigned long long UInt;  // NOLINT
-#endif  // _MSC_VER
+    typedef long long          Int; // NOLINT
+    typedef unsigned long long UInt; // NOLINT
+#endif // _MSC_VER
 };
 
 // This template class represents an IEEE floating-point number
@@ -131,8 +132,7 @@ public:
     static const size_t kBitCount = 8 * sizeof(RawType);
 
     // # of fraction bits in a number.
-    static const size_t kFractionBitCount =
-        std::numeric_limits<RawType>::digits - 1;
+    static const size_t kFractionBitCount = std::numeric_limits<RawType>::digits - 1;
 
     // # of exponent bits in a number.
     static const size_t kExponentBitCount = kBitCount - 1 - kFractionBitCount;
@@ -141,8 +141,7 @@ public:
     static const Bits kSignBitMask = static_cast<Bits>(1) << (kBitCount - 1);
 
     // The mask for the fraction bits.
-    static const Bits kFractionBitMask =
-        ~static_cast<Bits>(0) >> (kExponentBitCount + 1);
+    static const Bits kFractionBitMask = ~static_cast<Bits>(0) >> (kExponentBitCount + 1);
 
     // The mask for the exponent bits.
     static const Bits kExponentBitMask = ~(kSignBitMask | kFractionBitMask);
@@ -181,9 +180,7 @@ public:
     }
 
     // Returns the floating-point number that represent positive infinity.
-    static RawType Infinity() {
-        return ReinterpretBits(kExponentBitMask);
-    }
+    static RawType Infinity() { return ReinterpretBits(kExponentBitMask); }
 
     // Returns the maximum representable finite floating-point number.
     static RawType Max();
@@ -191,7 +188,7 @@ public:
     // Non-static methods
 
     // Returns the bits that represents this number.
-    const Bits &bits() const { return u_.bits_; }
+    const Bits& bits() const { return u_.bits_; }
 
     // Returns the exponent bits of this number.
     Bits exponent_bits() const { return kExponentBitMask & u_.bits_; }
@@ -218,17 +215,17 @@ public:
     bool AlmostEquals(const FloatingPoint& rhs) const {
         // The IEEE standard says that any comparison operation involving
         // a NAN must return false.
-        if (is_nan() || rhs.is_nan()) return false;
+        if (is_nan() || rhs.is_nan())
+            return false;
 
-        return DistanceBetweenSignAndMagnitudeNumbers(u_.bits_, rhs.u_.bits_)
-               <= kMaxUlps;
+        return DistanceBetweenSignAndMagnitudeNumbers(u_.bits_, rhs.u_.bits_) <= kMaxUlps;
     }
 
 private:
     // The data type used to store the actual floating-point number.
     union FloatingPointUnion {
-        RawType value_;  // The raw floating-point number.
-        Bits bits_;      // The bits that represent the number.
+        RawType value_; // The raw floating-point number.
+        Bits    bits_; // The bits that represent the number.
     };
 
     // Converts an integer from the sign-and-magnitude representation to
@@ -246,12 +243,11 @@ private:
     //
     // Read http://en.wikipedia.org/wiki/Signed_number_representations
     // for more details on signed number representations.
-    static Bits SignAndMagnitudeToBiased(const Bits &sam) {
+    static Bits SignAndMagnitudeToBiased(const Bits& sam) {
         if (kSignBitMask & sam) {
             // sam represents a negative number.
             return ~sam + 1;
-        }
-        else {
+        } else {
             // sam represents a positive number.
             return kSignBitMask | sam;
         }
@@ -259,8 +255,7 @@ private:
 
     // Given two numbers in the sign-and-magnitude representation,
     // returns the distance between them as an unsigned number.
-    static Bits DistanceBetweenSignAndMagnitudeNumbers(const Bits &sam1,
-                                                       const Bits &sam2) {
+    static Bits DistanceBetweenSignAndMagnitudeNumbers(const Bits& sam1, const Bits& sam2) {
         const Bits biased1 = SignAndMagnitudeToBiased(sam1);
         const Bits biased2 = SignAndMagnitudeToBiased(sam2);
         return (biased1 >= biased2) ? (biased1 - biased2) : (biased2 - biased1);
@@ -272,13 +267,16 @@ private:
 // We cannot use std::numeric_limits<T>::max() as it clashes with the max()
 // macro defined by <windows.h>.
 template <>
-inline float FloatingPoint<float>::Max() { return FLT_MAX; }
+inline float FloatingPoint<float>::Max() {
+    return FLT_MAX;
+}
 template <>
-inline double FloatingPoint<double>::Max() { return DBL_MAX; }
+inline double FloatingPoint<double>::Max() {
+    return DBL_MAX;
+}
 
 template <typename T>
-bool AlmostEquals(T first, T second)
-{
+bool AlmostEquals(T first, T second) {
     FloatingPoint<T> firstAsFloatingPoint(first);
     FloatingPoint<T> secondAsFloatingPoint(second);
 

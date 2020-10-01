@@ -20,43 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-cmake_minimum_required(VERSION 3.15)
-project(LtbUtilities LANGUAGES CXX)
-
-include(cmake/LtbConfig.cmake) # <-- Additional project options are in here.
-include(cmake/ThirdParty.cmake)
-
-############
-### Util ###
-############
-file(GLOB_RECURSE LTB_SOURCE_FILES
-        LIST_DIRECTORIES false
-        CONFIGURE_DEPENDS
-        ${CMAKE_CURRENT_LIST_DIR}/src/ltb/util/*
-        )
-
-### Optional CUDA ###
-if (CMAKE_CUDA_COMPILER)
-    file(GLOB_RECURSE LTB_CUDA_SOURCE_FILES
-            LIST_DIRECTORIES false
-            CONFIGURE_DEPENDS
-            ${CMAKE_CURRENT_LIST_DIR}/src/ltb/cuda/*
-            )
-    list(APPEND LTB_SOURCE_FILES ${LTB_CUDA_SOURCE_FILES})
-endif ()
-
-ltb_add_library(ltb_util 17 ${LTB_SOURCE_FILES})
-ltb_link_libraries(ltb_util
-        PUBLIC
-        LtbExternal::Expected
-        LtbExternal::RangeV3
-        Threads::Threads
-        LtbExternal::Doctest
-        )
-ltb_include_directories(ltb_util
-        PUBLIC
-        "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
-        "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated>"
-        )
-add_library(Ltb::Util ALIAS ltb_util)
-
+function(ltb_add_external _name _alias)
+    add_library(ltb_external_${_name} INTERFACE)
+    add_library(LtbExternal::${_alias} ALIAS ltb_external_${_name})
+endfunction()
