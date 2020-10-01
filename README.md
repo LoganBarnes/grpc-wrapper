@@ -1,11 +1,14 @@
-gRPC Wrapper
-============
+Ltb gRPC Wrapper
+================
 [![Travis CI][travis-badge]][travis-link]
 [![Codecov][codecov-badge]][codecov-link]
 [![MIT License][license-badge]][license-link]
 [![Docs][docs-badge]][docs-link]
 
 (Incomplete) C++ wrapper classes around [gRPC][grpc-link].
+
+WARNING: Going through a major refactor right now. If you stumble
+across this it's probably best to just keep on moving.
 
 ### Development
 
