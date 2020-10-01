@@ -100,18 +100,12 @@ struct ContextError {
     Error   error;
     Context context;
 
-    auto operator==(const ContextError<Context>& other) const -> bool;
-    auto operator!=(const ContextError<Context>& other) const -> bool;
+    ContextError(Error err, Context ctx) : error(std::move(err)), context(std::move(ctx)) {}
 };
 
 template <typename Context>
-auto ContextError<Context>::operator==(const ContextError<Context>& other) const -> bool {
-    return error == other.error && context == other.context;
-}
-
-template <typename Context>
-auto ContextError<Context>::operator!=(const ContextError<Context>& other) const -> bool {
-    return !(this->operator==(other));
+auto make_context_error(Error error, Context context) -> ContextError<Context> {
+    return {std::move(error), std::move(context)};
 }
 
 } // namespace ltb::util

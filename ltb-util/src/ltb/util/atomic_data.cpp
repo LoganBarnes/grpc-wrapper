@@ -26,6 +26,7 @@
 #include <doctest/doctest.h>
 
 // standard
+#include <array>
 #include <chrono>
 #include <vector>
 
@@ -54,7 +55,10 @@ TEST_CASE("[atomic_data] atomic_data_wait_timeout") {
         100ms, [](const auto& data) { return data.stop_waiting; }, [](auto& data) { data.update_happened = true; }));
 
     // Since the timeout of 100ms was reached the update should not have happened
-    shared_data.use_safely([]([[maybe_unused]] const auto& data) { CHECK_FALSE(data.update_happened); });
+    shared_data.use_safely([](const auto& data) {
+        [[maybe_unused]] bool should_be_false = data.update_happened;
+        CHECK_FALSE(should_be_false);
+    });
 
     // Wait again up to 5 seconds (the other thread should wake up and notify us within that time)
     CHECK(shared_data.wait_to_use_safely(
@@ -108,7 +112,7 @@ TEST_CASE_TEMPLATE("[atomic_data] interleaved_atomic_data", T, short, int, unsig
         bool           writing_odds   = false;
     };
 
-    constexpr short max_number = 9;
+    constexpr auto max_number = T(9);
 
     // Use AtomicData structure to update data from two threads
     util::AtomicData<SharedData> shared_data;

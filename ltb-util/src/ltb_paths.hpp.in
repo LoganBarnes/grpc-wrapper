@@ -27,7 +27,8 @@
 
 #include <string>
 
-namespace ltb::paths {
+namespace ltb {
+namespace paths {
 
 inline auto slash() -> std::string {
     return "@SLASH@";
@@ -37,4 +38,5 @@ inline auto project_root() -> std::string {
     return "@NATIVE_PROJECT_SOURCE_DIR@" + slash();
 }
 
-} // namespace ltb::paths
+} // namespace paths
+} // namespace ltb

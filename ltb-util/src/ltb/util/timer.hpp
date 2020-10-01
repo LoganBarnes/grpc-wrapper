@@ -29,15 +29,25 @@
 
 namespace ltb::util {
 
+class Timer {
+public:
+    explicit Timer(std::string name = "", std::ostream* os = nullptr);
+    auto start() -> void;
+    auto millis_since_start() -> double;
+
+private:
+    std::string                                        name_;
+    std::ostream*                                      ostream_;
+    std::chrono::time_point<std::chrono::steady_clock> start_time_;
+};
+
 class ScopedTimer {
 public:
     explicit ScopedTimer(std::string name, std::ostream& os = std::cout);
     ~ScopedTimer();
 
 private:
-    std::ostream&                                      ostream_;
-    std::string                                        name_;
-    std::chrono::time_point<std::chrono::steady_clock> start_time_;
+    Timer timer_;
 };
 
 } // namespace ltb::util

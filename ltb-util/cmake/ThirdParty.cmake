@@ -22,15 +22,15 @@
 ##########################################################################################
 include(FetchContent)
 
-FetchContent_Declare(expected_dl
+FetchContent_Declare(ltb_expected_dl
         GIT_REPOSITORY https://github.com/TartanLlama/expected.git
         GIT_TAG v1.0.0
         )
-FetchContent_Declare(range_v3_dl
+FetchContent_Declare(ltb_range_v3_dl
         GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
-        GIT_TAG 0.9.1
+        GIT_TAG 0.10.0
         )
-FetchContent_Declare(doctest_dl
+FetchContent_Declare(ltb_doctest_dl
         GIT_REPOSITORY https://github.com/onqtam/doctest.git
         GIT_TAG 2.3.6
         )
@@ -40,39 +40,65 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 ### Expected ###
-FetchContent_GetProperties(expected_dl)
-if (NOT expected_dl_POPULATED)
-    FetchContent_Populate(expected_dl)
+FetchContent_GetProperties(ltb_expected_dl)
+if (NOT ltb_expected_dl_POPULATED)
+    FetchContent_Populate(ltb_expected_dl)
 
     set(EXPECTED_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
     set(EXPECTED_ENABLE_DOCS OFF CACHE BOOL "" FORCE)
 
     # compile expected with current project
-    add_subdirectory(${expected_dl_SOURCE_DIR} ${expected_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif (NOT expected_dl_POPULATED)
+    add_subdirectory(${ltb_expected_dl_SOURCE_DIR} ${ltb_expected_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
+
+    ltb_add_external(expected Expected)
+    target_link_libraries(ltb_external_expected
+            INTERFACE
+            expected
+            )
+endif (NOT ltb_expected_dl_POPULATED)
 
 ### Range-v3 ###
-FetchContent_GetProperties(range_v3_dl)
-if (NOT range_v3_dl_POPULATED)
-    FetchContent_Populate(range_v3_dl)
+FetchContent_GetProperties(ltb_range_v3_dl)
+if (NOT ltb_range_v3_dl_POPULATED)
+    FetchContent_Populate(ltb_range_v3_dl)
 
     set(RANGES_CXX_STD 17 CACHE INTERNAL "C++ standard version")
 
     # compile with current project
-    add_subdirectory(${range_v3_dl_SOURCE_DIR} ${range_v3_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
-    target_include_directories(range-v3 SYSTEM INTERFACE $<BUILD_INTERFACE:${range_v3_dl_SOURCE_DIR}/include/>)
-endif (NOT range_v3_dl_POPULATED)
+    add_subdirectory(${ltb_range_v3_dl_SOURCE_DIR} ${ltb_range_v3_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
+
+    ltb_add_external(range_v3 RangeV3)
+    target_include_directories(ltb_external_range_v3
+            SYSTEM INTERFACE
+            $<BUILD_INTERFACE:${ltb_range_v3_dl_SOURCE_DIR}/include/>
+            )
+    target_compile_options(ltb_external_range_v3
+            INTERFACE
+            $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->
+            )
+endif (NOT ltb_range_v3_dl_POPULATED)
 
 ### DocTest ###
-FetchContent_GetProperties(doctest_dl)
-if (NOT doctest_dl_POPULATED)
-    FetchContent_Populate(doctest_dl)
+FetchContent_GetProperties(ltb_doctest_dl)
+if (NOT ltb_doctest_dl_POPULATED)
+    FetchContent_Populate(ltb_doctest_dl)
 
     set(DOCTEST_WITH_TESTS OFF CACHE BOOL "" FORCE)
     set(DOCTEST_WITH_MAIN_IN_STATIC_LIB ON CACHE BOOL "" FORCE)
 
     # compile with current project
-    add_subdirectory(${doctest_dl_SOURCE_DIR} ${doctest_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
+    add_subdirectory(${ltb_doctest_dl_SOURCE_DIR} ${ltb_doctest_dl_BINARY_DIR} EXCLUDE_FROM_ALL)
+
+    ltb_add_external(doctest Doctest)
+    target_link_libraries(ltb_external_doctest
+            INTERFACE
+            doctest
+            )
+    ltb_add_external(doctest_with_main DoctestWithMain)
+    target_link_libraries(ltb_external_doctest_with_main
+            INTERFACE
+            doctest_with_main
+            )
 
     # add test coverage capabilities if available
     find_program(LCOV_EXE
