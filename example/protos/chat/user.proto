@@ -1,6 +1,6 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 // gRPC Wrapper
-// Copyright (c) 2019 Logan Barnes - All Rights Reserved
+// Copyright (c) 2020 Logan Barnes - All Rights Reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "grpcw/server/scoped_grpc_server.hpp"
+syntax = "proto3";
 
-// third-party
-#include <grpc++/impl/codegen/service_type.h>
+package example.protocol;
 
-namespace grpcw {
-namespace server {
+import "google/protobuf/wrappers.proto";
 
-ScopedGrpcServer::ScopedGrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address)
-    : server_(std::move(service), server_address), run_thread_([this] { server_.run(); }) {}
+message User {
+    User.Id id = 1;
+    UserInfo info = 2;
+    bool admin = 3;
 
-ScopedGrpcServer::~ScopedGrpcServer() {
-    server_.shutdown();
-    run_thread_.join();
+    message Id {
+        string value = 1;
+    }
 }
 
-auto ScopedGrpcServer::in_process_channel(const grpc_impl::ChannelArguments& channel_arguments)
-    -> std::shared_ptr<grpc::Channel> {
-    return server_.in_process_channel(channel_arguments);
-}
 
-} // namespace server
-} // namespace grpcw
+message UserInfo {
+    google.protobuf.StringValue name = 1;
+}

@@ -1,6 +1,6 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 // gRPC Wrapper
-// Copyright (c) 2019 Logan Barnes - All Rights Reserved
+// Copyright (c) 2020 Logan Barnes - All Rights Reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,41 @@ syntax = "proto3";
 package example.protocol;
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+import "chat/user.proto";
+import "chat/message.proto";
+import "util/util.proto";
 
-service Clock {
-    rpc GetServerTimeNow (FormatRequest) returns (Time);
-    rpc GetServerTimeUpdates (google.protobuf.Empty) returns (stream Time);
+service ChatRoom {
+    // Unary call
+    rpc DispatchAction (Action) returns (util.Result);
+
+    // Client streaming call
+    rpc PokeUser (stream User.Id) returns (util.Result);
+
+    // Server streaming call
+    rpc SearchMessages (google.protobuf.StringValue) returns (stream UserMessage);
+
+    // Bidirectional streaming call
+    rpc GetMessages (stream ChatMessage.Id) returns (stream ChatMessageResult);
+
+    // Long running server streaming call
+    rpc GetUpdates (google.protobuf.Empty) returns (stream Update);
+
+    // Long running client side and bidirectional streaming not supported
 }
 
-enum Format {
-    COMPOUND = 0;
-    HOURS = 1;
-    MINUTES = 2;
-    SECONDS = 3;
+message Action {
+    oneof action {
+        ChatMessage send_message = 1;
+        UserInfo change_client_info = 2;
+    }
 }
 
-message FormatRequest {
-    Format format = 1;
-}
-
-message Time {
-    string display_time = 1;
+message Update {
+    oneof update {
+        UserMessage new_message = 1;
+        User client_update = 2;
+        User.Id poked_by = 3;
+    }
 }

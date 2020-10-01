@@ -1,6 +1,6 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 // gRPC Wrapper
-// Copyright (c) 2019 Logan Barnes - All Rights Reserved
+// Copyright (c) 2020 Logan Barnes - All Rights Reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,9 @@ package grpcw.testing.protocol;
 
 service Test {
     rpc echo (TestMessage) returns (TestMessage);
+    rpc client_echo_stream (stream TestMessage) returns (TestMessage);
+    rpc server_echo_stream (TestMessage) returns (stream TestMessage);
+    rpc bidirectional_echo_stream (stream TestMessage) returns (stream TestMessage);
     rpc endless_echo_stream (TestMessage) returns (stream TestMessage);
 }
 

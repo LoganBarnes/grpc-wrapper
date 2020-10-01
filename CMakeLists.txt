@@ -20,170 +20,89 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-cmake_minimum_required(VERSION 3.12)
-project(gRPC-Wrapper LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.18)
+project(LtbGrpcw LANGUAGES CXX)
 
-option(GRPCW_BUILD_TESTS "Build unit tests" OFF)
-option(GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
-option(GRPCW_USE_DEV_FLAGS "Compile with all the flags" OFF)
-option(GRPCW_SKIP_PACKAGE_FINDING "Assume gRPC and Protobuf have already been found by CMake" OFF)
-option(GRPCW_THREAD_SANTIZING "Add thread sanitizer flags (only in debug mode)" OFF)
+option(LTB_GRPCW_BUILD_EXAMPLE "Build an example server and client" OFF)
+option(LTB_THREAD_SANITIZATION "Add thread sanitizer flags (only in debug mode)" OFF)
 
-#############################
-### Project Configuration ###
-#############################
-set(GRPCW_CXX_STANDARD 14)
+include(${CMAKE_CURRENT_LIST_DIR}/ltb-util/cmake/LtbConfig.cmake) # <-- Additional project options are in here.
 
-# ccache
-find_program(GRPCW_CCACHE_PROGRAM ccache)
-if (GRPCW_CCACHE_PROGRAM)
-    message("-- Found CCache: ${GRPCW_CCACHE_PROGRAM}")
-else ()
-    message("-- Not Found: CCache")
-endif ()
+############
+### Util ###
+############
+add_subdirectory(ltb-util)
 
-if (MSVC)
-    add_definitions(-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS) # silly microsoft
-    set(SYSTEM_FLAGS /experimental:external /external:anglebrackets /external:W0)
-endif ()
-
-if (GRPCW_USE_DEV_FLAGS)
-    if (NOT MSVC)
-        set(GRPCW_COMPILE_FLAGS
-                $<$<COMPILE_LANGUAGE:CXX>:-Wall>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wextra>
-                $<$<COMPILE_LANGUAGE:CXX>:-Werror>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wpedantic>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wunused>
-                $<$<COMPILE_LANGUAGE:CXX>:-pedantic-errors>
-                $<$<COMPILE_LANGUAGE:CXX>:-Winit-self>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
-                $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wsign-conversion>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wshadow>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wmissing-declarations>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wmissing-include-dirs>
-                $<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>
-                )
-    else ()
-        set(GRPCW_COMPILE_FLAGS $<$<COMPILE_LANGUAGE:CXX>:/WX>)
-    endif ()
-endif ()
-
-include(cmake/ClangTidy.cmake)
-include(cmake/ThirdParty.cmake)
-include(cmake/CreateProtoLibrary.cmake)
-
-# "Glob is terrible/root of all evil" yeah yeah. CONFIGURE_DEPENDS in cmake 3.12
-# helps to fix that and it is super useful when refactoring
-cmake_policy(SET CMP0009 NEW)
-
-get_directory_property(GRPCW_HAS_PARENT PARENT_DIRECTORY)
+########################
+### External Targets ###
+########################
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/CreateProtoLibrary.cmake)
 
 ####################
-### gRPC Wrapper ###
+### Source Files ###
 ####################
-set(GRPCW_LIBRARY grpc_wrapper)
-
-file(GLOB_RECURSE GRPCW_SOURCE_FILES
+file(GLOB_RECURSE LTB_CORE_SOURCE_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_LIST_DIR}/include/grpcw/*
         ${CMAKE_CURRENT_LIST_DIR}/src/grpcw/*
         )
 
-add_library(${GRPCW_LIBRARY} ${GRPCW_SOURCE_FILES})
-target_link_libraries(${GRPCW_LIBRARY}
-        PUBLIC protobuf::libprotobuf
-        PUBLIC gRPC::grpc++
-        PUBLIC ${CMAKE_DL_LIBS}
-        PUBLIC Threads::Threads
-        PRIVATE doctest
+file(GLOB_RECURSE LTB_TEST_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_LIST_DIR}/src/testing/*
         )
-target_compile_options(${GRPCW_LIBRARY} PRIVATE ${GRPCW_COMPILE_FLAGS})
-target_compile_definitions(${GRPCW_LIBRARY} PRIVATE -DDOCTEST_CONFIG_DISABLE)
 
-if (GRPCW_HAS_PARENT)
-    target_include_directories(${GRPCW_LIBRARY} SYSTEM
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
+#############
+### GRPCW ###
+#############
+ltb_add_library(ltb_grpcw
+        17
+        ${LTB_CORE_SOURCE_FILES}
+        $<$<BOOL:${LTB_BUILD_TESTS}>:${LTB_TEST_SOURCE_FILES}>
+        )
+
+ltb_link_libraries(ltb_grpcw
+        PUBLIC
+        gRPC::grpc++
+        Ltb::Util
+        )
+
+ltb_include_directories(ltb_grpcw
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
+        )
+
+if (${LTB_THREAD_SANITIZATION})
+    ltb_compile_options(ltb_grpcw
+            PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
             )
-else ()
-    target_include_directories(${GRPCW_LIBRARY}
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
-            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>"
+    ltb_link_options(ltb_grpcw
+            PRIVATE
+            $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>
             )
 endif ()
 
-if (GRPCW_THREAD_SANTIZING)
-    target_compile_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_link_options(${GRPCW_LIBRARY} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-endif ()
+add_library(Ltb::grpcw ALIAS ltb_grpcw)
 
 ###############
 ### Testing ###
 ###############
-if (GRPCW_BUILD_TESTS)
-    set(GRPCW_TESTS test_${GRPCW_LIBRARY})
-
-    create_proto_library(
-            testing_protos
+if (${LTB_BUILD_TESTS})
+    create_proto_library(ltb_grpcw_testing_protos
             ${CMAKE_CURRENT_LIST_DIR}/protos/testing
             ${CMAKE_BINARY_DIR}/generated/protos
-    )
-
-    file(GLOB_RECURSE GRPCW_TEST_FILES
-            LIST_DIRECTORIES false
-            CONFIGURE_DEPENDS
-            ${CMAKE_CURRENT_LIST_DIR}/src/testing/*
             )
 
-    # Create an executable to run the tests
-    add_executable(${GRPCW_TESTS} ${GRPCW_SOURCE_FILES} ${GRPCW_TEST_FILES})
-    target_link_libraries(${GRPCW_TESTS}
-            PRIVATE doctest_with_main
-            PRIVATE ${GRPCW_LIBRARY}
-            PRIVATE testing_protos
-            )
-    target_compile_options(${GRPCW_TESTS} PRIVATE ${GRPCW_COMPILE_FLAGS})
-
-    if (GRPCW_THREAD_SANTIZING)
-        target_compile_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-        target_link_options(${GRPCW_TESTS} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    endif ()
-
-    add_test(NAME ${GRPCW_LIBRARY}_tests COMMAND ${GRPCW_TESTS})
-
-    if (COMMAND SETUP_TARGET_FOR_COVERAGE)
-        # Create a build that generates coverage reports
-        setup_target_for_coverage(${GRPCW_TESTS}_coverage ${GRPCW_TESTS} ${GRPCW_TESTS}_coverage)
-        apply_coverage_dependencies(${GRPCW_TESTS})
-    endif ()
+    target_link_libraries(test_ltb_grpcw PRIVATE ltb_grpcw_testing_protos)
 endif ()
-
-
-set_target_properties(
-        ${GRPCW_LIBRARY}
-        ${GRPCW_TESTS}
-        PROPERTIES
-        # C++ flags
-        CXX_STANDARD ${GRPCW_CXX_STANDARD}
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-        POSITION_INDEPENDENT_CODE ON
-        # CCache
-        COMPILER_LAUNCHER "${GRPCW_CCACHE_PROGRAM}"
-        # Clang-Tidy
-        CXX_CLANG_TIDY "${GRPCW_CLANG_TIDY}"
-        # Binary locations
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-)
 
 ###############
 ### Example ###
 ###############
-if (GRPCW_BUILD_EXAMPLE)
+if (${LTB_GRPCW_BUILD_EXAMPLE})
     add_subdirectory(example)
 endif ()

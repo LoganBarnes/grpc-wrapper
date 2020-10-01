@@ -20,30 +20,97 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-function(create_proto_library target_name proto_dir cpp_output_dir)
 
-    if (NOT DEFINED PROTOBUF_GENERATE_CPP_APPEND_PATH)
-        set(PROTOBUF_GENERATE_CPP_APPEND_PATH TRUE)
+### Threads ###
+find_package(Threads REQUIRED)
+
+# Find the Protobuf and gRPC libraries installed by CMake.
+
+### Protobuf ###
+find_package(Protobuf CONFIG REQUIRED)
+message(STATUS "Using protobuf ${Protobuf_VERSION}")
+
+### gRPC ###
+find_package(gRPC CONFIG REQUIRED)
+message(STATUS "Using gRPC ${gRPC_VERSION}")
+
+set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
+set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+
+function(grpc_generate_cpp _generated_files)
+    # set(options OPTIONAL FAST)
+    set(oneValueArgs CPP_OUT GRPC_OUT)
+    set(multiValueArgs IMPORT_DIRS PROTO_FILES)
+    cmake_parse_arguments(GRPC_GEN_CPP "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    list(LENGTH GRPC_GEN_CPP_IMPORT_DIRS IMPORT_DIRS_COUNT)
+
+    if (${IMPORT_DIRS_COUNT} EQUAL 0)
+        set(PRIMARY_IMPORT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    else ()
+        list(GET GRPC_GEN_CPP_IMPORT_DIRS 0 GRPC_GEN_CPP_IMPORT_DIRS_0)
+        get_filename_component(PRIMARY_IMPORT_DIR ${GRPC_GEN_CPP_IMPORT_DIRS_0} ABSOLUTE)
     endif ()
-    if (NOT DEFINED GRPC_GENERATE_CPP_APPEND_PATH)
-        set(GRPC_GENERATE_CPP_APPEND_PATH TRUE)
-    endif ()
+
+    foreach (IMPORT_DIR ${GRPC_GEN_CPP_IMPORT_DIRS})
+        get_filename_component(ABSOLUTE_IMPORT_PATH ${IMPORT_DIR} ABSOLUTE)
+        list(APPEND _IMPORT_DIRS -I ${ABSOLUTE_IMPORT_PATH})
+    endforeach ()
+
+    foreach (PROTO_FILE ${GRPC_GEN_CPP_PROTO_FILES})
+        get_filename_component(ABSOLUTE_PROTO_FILE ${PROTO_FILE} ABSOLUTE)
+        list(APPEND _PROTO_FILES ${ABSOLUTE_PROTO_FILE})
+
+        get_filename_component(PROTO_FILE_DIRECTORY ${PROTO_FILE} DIRECTORY)
+        get_filename_component(PROTO_FILE_NAME_WE ${PROTO_FILE} NAME_WE)
+        list(APPEND _GENERATED_FILES
+                ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.pb.h
+                ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.pb.cc
+                ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.grpc.pb.h
+                ${PROTO_FILE_DIRECTORY}/${PROTO_FILE_NAME_WE}.grpc.pb.cc
+                )
+    endforeach ()
+
+    list(TRANSFORM _GENERATED_FILES REPLACE "${PRIMARY_IMPORT_DIR}" "")
+
+    add_custom_command(
+            OUTPUT ${_GENERATED_FILES}
+            COMMAND ${_PROTOBUF_PROTOC}
+            ARGS
+            --cpp_out ${GRPC_GEN_CPP_CPP_OUT} # <file>.pb.h/cc
+            --grpc_out ${GRPC_GEN_CPP_GRPC_OUT} # <file>.grpc.pb.h/cc
+            ${_IMPORT_DIRS}
+            --plugin=protoc-gen-grpc=${_GRPC_CPP_PLUGIN_EXECUTABLE}
+            ${_PROTO_FILES}
+            DEPENDS ${_PROTO_FILES}
+            VERBATIM
+    )
+
+    set_source_files_properties(${_GENERATED_FILES} PROPERTIES GENERATED TRUE)
+    set(${_generated_files} ${_GENERATED_FILES} PARENT_SCOPE)
+endfunction()
+
+function(create_proto_library _target_name _proto_dir _generated_dir)
 
     # make the output directory
-    file(MAKE_DIRECTORY ${cpp_output_dir})
+    file(MAKE_DIRECTORY ${_generated_dir})
 
     # gather proto files
     file(GLOB_RECURSE PROTO_FILES
             LIST_DIRECTORIES false
             CONFIGURE_DEPENDS
-            ${proto_dir}/*.proto
+            ${_proto_dir}/*.proto
             )
 
     # generate service objects
-    protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${cpp_output_dir} ${PROTO_FILES})
-    grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${cpp_output_dir} ${PROTO_FILES})
+    grpc_generate_cpp(GENERATED_FILES
+            CPP_OUT ${_generated_dir}
+            GRPC_OUT ${_generated_dir}
+            IMPORT_DIRS ${_proto_dir}
+            PROTO_FILES ${PROTO_FILES}
+            )
 
-    add_library(${target_name} ${PROTO_HDRS} ${PROTO_SRCS} ${GRPC_HDRS} ${GRPC_SRCS})
-    target_link_libraries(${target_name} PUBLIC grpc_wrapper)
-    target_include_directories(${target_name} SYSTEM PUBLIC ${cpp_output_dir})
+    add_library(${_target_name} ${GENERATED_FILES})
+    target_link_libraries(${_target_name} PUBLIC Ltb::grpcw)
+    target_include_directories(${_target_name} SYSTEM PUBLIC ${_generated_dir})
 endfunction()

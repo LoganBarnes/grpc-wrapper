@@ -45,7 +45,8 @@ public:
     /**
      * @brief This can be used to create in-process clients
      */
-    auto in_process_channel(const grpc::ChannelArguments& channel_arguments = {}) -> std::shared_ptr<grpc::Channel>;
+    auto in_process_channel(const grpc_impl::ChannelArguments& channel_arguments = {})
+        -> std::shared_ptr<grpc_impl::Channel>;
 
 private:
     GrpcServer server_;

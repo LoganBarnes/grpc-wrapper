@@ -47,8 +47,8 @@ GrpcClientStreamInterface<Service>::~GrpcClientStreamInterface() = default;
 template <typename Service, typename Return>
 class GrpcClientStream : public GrpcClientStreamInterface<Service> {
 public:
-    using InitFunc
-        = std::function<std::unique_ptr<grpc::ClientReader<Return>>(typename Service::Stub&, grpc::ClientContext*)>;
+    using InitFunc = std::function<std::unique_ptr<grpc_impl::ClientReader<Return>>(typename Service::Stub&,
+                                                                                    grpc::ClientContext*)>;
     using OnUpdate = std::function<void(Return&&)>;
     using OnFinish = std::function<void(const grpc::Status&)>;
 
@@ -64,7 +64,7 @@ public:
 
 private:
     std::unique_ptr<grpc::ClientContext> context_ = nullptr;
-    std::unique_ptr<grpc::ClientReader<Return>> reader_ = nullptr;
+    std::unique_ptr<grpc_impl::ClientReader<Return>> reader_ = nullptr;
     std::unique_ptr<std::thread> stream_thread_ = nullptr;
 
     InitFunc init_func_;

@@ -20,43 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##########################################################################################
-create_proto_library(
-        example_protos
+create_proto_library(ltb_grpcw_example_protos
         ${CMAKE_CURRENT_LIST_DIR}/protos
         ${CMAKE_BINARY_DIR}/generated/protos
-)
+        )
 
-add_executable(example-client ${CMAKE_CURRENT_LIST_DIR}/src/example_client)
-add_executable(example-server ${CMAKE_CURRENT_LIST_DIR}/src/example_server)
+ltb_add_executable(example-client
+        17
+        ${CMAKE_CURRENT_LIST_DIR}/src/example_client.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/example_client.hpp
+        )
+ltb_add_executable(example-server
+        17
+        ${CMAKE_CURRENT_LIST_DIR}/src/example_server.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/example_server.hpp
+        )
 
-target_link_libraries(example-client PRIVATE grpc_wrapper example_protos)
-target_link_libraries(example-server PRIVATE grpc_wrapper example_protos)
-
-target_compile_options(example-client PRIVATE ${GRPCW_COMPILE_FLAGS})
-target_compile_options(example-server PRIVATE ${GRPCW_COMPILE_FLAGS})
-
-if (GRPCW_THREAD_SANTIZING)
-    target_compile_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_compile_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_link_options(example-client PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-    target_link_options(example-server PRIVATE $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:DEBUG>:-fsanitize=thread>>)
-endif ()
-
-set_target_properties(
-        example-client
-        example-server
-        PROPERTIES
-        # C++ flags
-        CXX_STANDARD ${GRPCW_CXX_STANDARD}
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF
-        POSITION_INDEPENDENT_CODE ON
-        # CCache
-        COMPILER_LAUNCHER "${GRPCW_CCACHE_PROGRAM}"
-        # Clang-Tidy
-        CXX_CLANG_TIDY "${GRPCW_CLANG_TIDY}"
-        # Binary locations
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-)
+target_link_libraries(example-client PRIVATE ltb_grpcw_example_protos)
+target_link_libraries(example-server PRIVATE ltb_grpcw_example_protos)

@@ -28,7 +28,7 @@ function(ltb_add_library target cxx_standard)
 
     ltb_set_properties(${target} ${cxx_standard})
 
-    if (LTB_BUILD_TESTS) # BUILDING WITH TESTS
+    if (${LTB_BUILD_TESTS}) # BUILDING WITH TESTS
         # Create an executable to run the tests
         set(test_target test_${target})
         add_executable(${test_target} ${ARGN})
@@ -51,7 +51,7 @@ endfunction()
 function(ltb_link_libraries target)
     target_link_libraries(${target} ${ARGN})
 
-    if (LTB_BUILD_TESTS)
+    if (${LTB_BUILD_TESTS})
         set(test_target test_${target})
         target_link_libraries(${test_target} ${ARGN})
     endif ()
@@ -60,8 +60,26 @@ endfunction()
 function(ltb_include_directories target)
     target_include_directories(${target} ${ARGN})
 
-    if (LTB_BUILD_TESTS)
+    if (${LTB_BUILD_TESTS})
         set(test_target test_${target})
         target_include_directories(${test_target} ${ARGN})
+    endif ()
+endfunction()
+
+function(ltb_compile_options target)
+    target_compile_options(${target} ${ARGN})
+
+    if (${LTB_BUILD_TESTS})
+        set(test_target test_${target})
+        target_compile_options(${test_target} ${ARGN})
+    endif ()
+endfunction()
+
+function(ltb_link_options target)
+    target_link_options(${target} ${ARGN})
+
+    if (${LTB_BUILD_TESTS})
+        set(test_target test_${target})
+        target_link_options(${test_target} ${ARGN})
     endif ()
 endfunction()

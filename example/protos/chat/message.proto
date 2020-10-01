@@ -1,6 +1,6 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 // gRPC Wrapper
-// Copyright (c) 2019 Logan Barnes - All Rights Reserved
+// Copyright (c) 2020 Logan Barnes - All Rights Reserved
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ///////////////////////////////////////////////////////////////////////////////////////
-#include "grpcw/server/scoped_grpc_server.hpp"
+syntax = "proto3";
 
-// third-party
-#include <grpc++/impl/codegen/service_type.h>
+package example.protocol;
 
-namespace grpcw {
-namespace server {
+import "chat/user.proto";
+import "util/util.proto";
 
-ScopedGrpcServer::ScopedGrpcServer(std::unique_ptr<grpc::Service> service, const std::string& server_address)
-    : server_(std::move(service), server_address), run_thread_([this] { server_.run(); }) {}
+message ChatMessage {
+    ChatMessage.Id id = 1;
+    string value = 2;
 
-ScopedGrpcServer::~ScopedGrpcServer() {
-    server_.shutdown();
-    run_thread_.join();
+    message Id {
+        string value = 1;
+    }
 }
 
-auto ScopedGrpcServer::in_process_channel(const grpc_impl::ChannelArguments& channel_arguments)
-    -> std::shared_ptr<grpc::Channel> {
-    return server_.in_process_channel(channel_arguments);
+message UserMessage {
+    User.Id client_id = 1;
+    ChatMessage.Id message_id = 2;
 }
 
-} // namespace server
-} // namespace grpcw
+message ChatMessageResult {
+    oneof result {
+        ChatMessage message = 1;
+        util.Error error = 2;
+    }
+}
