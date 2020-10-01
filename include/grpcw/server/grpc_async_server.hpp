@@ -117,8 +117,9 @@ void GrpcAsyncServer<Service>::register_async(AsyncNoStreamFunc<BaseService, Req
                                                                                no_stream_func,
                                                                                std::forward<Callback>(callback));
 
-    void* tag = handler.get();
+    auto* tag = handler.get();
     rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
+    tag->activate_next();
 }
 
 template <typename Service>
@@ -132,6 +133,7 @@ auto GrpcAsyncServer<Service>::register_async_stream(AsyncServerStreamFunc<BaseS
                                                                                               stream_func);
     auto* tag = handler.get();
     rpc_handlers_.use_safely([&](RpcMap& rpc_handlers) { rpc_handlers.emplace(tag, std::move(handler)); });
+    tag->activate_next();
     return {tag};
 }
 

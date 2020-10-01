@@ -39,22 +39,47 @@ ltb_add_executable(example_server
 target_link_libraries(example_client PUBLIC ltb_grpcw_example_protos)
 target_link_libraries(example_server PUBLIC ltb_grpcw_example_protos)
 
+########################
+### New Architecture ###
+########################
+
+### Source Files ###
+set(GRPCW_TMP_SERVER_MAIN ${CMAKE_CURRENT_LIST_DIR}/src/server/new_arch_server.cpp)
+set(GRPCW_TMP_CLIENT_MAIN ${CMAKE_CURRENT_LIST_DIR}/src/client/new_arch_client.cpp)
+
+file(GLOB_RECURSE GRPCW_TMP_SHARED_SOURCE_FILES
+        LIST_DIRECTORIES false
+        CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_LIST_DIR}/src/shared/*
+        )
+
 file(GLOB_RECURSE GRPCW_TMP_SERVER_SOURCE_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_LIST_DIR}/src/server/*
-        ${CMAKE_CURRENT_LIST_DIR}/src/shared/*
         )
+list(REMOVE_ITEM GRPCW_TMP_SERVER_SOURCE_FILES ${GRPCW_TMP_SERVER_MAIN})
 
 file(GLOB_RECURSE GRPCW_TMP_CLIENT_SOURCE_FILES
         LIST_DIRECTORIES false
         CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_LIST_DIR}/src/client/*
-        ${CMAKE_CURRENT_LIST_DIR}/src/shared/*
         )
+list(REMOVE_ITEM GRPCW_TMP_CLIENT_SOURCE_FILES ${GRPCW_TMP_CLIENT_MAIN})
 
-add_executable(new_arch_server ${GRPCW_TMP_SERVER_SOURCE_FILES})
-add_executable(new_arch_client ${GRPCW_TMP_CLIENT_SOURCE_FILES})
+### Executables ###
+ltb_add_executable(new_arch_server
+        17
+        ${GRPCW_TMP_SERVER_MAIN}
+        ${GRPCW_TMP_SERVER_SOURCE_FILES}
+        ${GRPCW_TMP_SHARED_SOURCE_FILES}
+        )
+ltb_add_executable(new_arch_client
+        17
+        ${GRPCW_TMP_CLIENT_MAIN}
+        ${GRPCW_TMP_CLIENT_SOURCE_FILES}
+        ${GRPCW_TMP_SHARED_SOURCE_FILES}
+        )
 
 target_link_libraries(new_arch_server PUBLIC ltb_grpcw_example_protos)
 target_link_libraries(new_arch_client PUBLIC ltb_grpcw_example_protos)

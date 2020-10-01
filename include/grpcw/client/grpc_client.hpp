@@ -323,7 +323,6 @@ template <typename Service>
 void GrpcClient<Service>::run(const std::function<void(const GrpcClientState&)>& connection_change_callback) {
 
     GrpcClientState cnc_client_state;
-    grpc::Status status;
 
     void* current_tag; // A label so se can identify the current update
     bool result_ok; // Set to false if the queue receives updates due to cancellation (like hitting our deadline)
