@@ -36,7 +36,7 @@ ScopedGrpcServer::~ScopedGrpcServer() {
     run_thread_.join();
 }
 
-auto ScopedGrpcServer::in_process_channel(const grpc_impl::ChannelArguments& channel_arguments)
+auto ScopedGrpcServer::in_process_channel(const grpc::ChannelArguments& channel_arguments)
     -> std::shared_ptr<grpc::Channel> {
     return server_.in_process_channel(channel_arguments);
 }

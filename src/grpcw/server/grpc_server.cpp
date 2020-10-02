@@ -55,8 +55,7 @@ void GrpcServer::shutdown() {
     server_->Shutdown();
 }
 
-auto GrpcServer::in_process_channel(const grpc_impl::ChannelArguments& channel_arguments)
-    -> std::shared_ptr<grpc_impl::Channel> {
+auto GrpcServer::in_process_channel(const grpc::ChannelArguments& channel_arguments) -> std::shared_ptr<grpc::Channel> {
     return server_->InProcessChannel(channel_arguments);
 }
 

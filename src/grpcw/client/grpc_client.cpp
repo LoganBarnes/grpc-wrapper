@@ -26,7 +26,7 @@ namespace grpcw {
 namespace client {
 
 auto default_channel_arguments() -> grpc::ChannelArguments {
-    grpc_impl::ChannelArguments arguments;
+    grpc::ChannelArguments arguments;
     arguments.SetMaxReceiveMessageSize(std::numeric_limits<int>::max());
     return arguments;
 }

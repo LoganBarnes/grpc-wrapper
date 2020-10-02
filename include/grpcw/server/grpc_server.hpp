@@ -42,8 +42,7 @@ public:
     void shutdown(const TimePoint& deadline);
     void shutdown();
 
-    auto in_process_channel(const grpc_impl::ChannelArguments& channel_arguments = {})
-        -> std::shared_ptr<grpc_impl::Channel>;
+    auto in_process_channel(const grpc::ChannelArguments& channel_arguments = {}) -> std::shared_ptr<grpc::Channel>;
 
 private:
     std::unique_ptr<grpc::Service> service_;

@@ -1,5 +1,5 @@
-Ltb gRPC Wrapper
-================
+Ltb Networking
+==============
 [![Travis CI][travis-badge]][travis-link]
 [![Codecov][codecov-badge]][codecov-link]
 [![MIT License][license-badge]][license-link]
@@ -9,6 +9,10 @@ Ltb gRPC Wrapper
 
 WARNING: Going through a major refactor right now. If you stumble
 across this it's probably best to just keep on moving.
+
+### Building
+
+Requires the CMake build of gRPC 1.32.0 to be installed on the system.
 
 ### Development
 
@@ -24,13 +28,13 @@ git subtree push --prefix ltb-whatev ltb-whatev master
 git subtree pull --prefix ltb-whatev ltb-whatev master --squash
 ```
 
-[travis-badge]: https://travis-ci.org/LoganBarnes/grpc-wrapper.svg?branch=master
-[travis-link]: https://travis-ci.org/LoganBarnes/grpc-wrapper
-[codecov-badge]: https://codecov.io/gh/LoganBarnes/grpc-wrapper/branch/master/graph/badge.svg
-[codecov-link]: https://codecov.io/gh/LoganBarnes/grpc-wrapper
+[travis-badge]: https://travis-ci.org/LoganBarnes/ltb-net.svg?branch=master
+[travis-link]: https://travis-ci.org/LoganBarnes/ltb-net
+[codecov-badge]: https://codecov.io/gh/LoganBarnes/ltb-net/branch/master/graph/badge.svg
+[codecov-link]: https://codecov.io/gh/LoganBarnes/ltb-net
 [license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
-[license-link]: https://github.com/LoganBarnes/grpc-wrapper/blob/master/LICENSE
-[docs-badge]: https://codedocs.xyz/LoganBarnes/grpc-wrapper.svg
-[docs-link]: https://codedocs.xyz/LoganBarnes/grpc-wrapper
+[license-link]: https://github.com/LoganBarnes/ltb-net/blob/master/LICENSE
+[docs-badge]: https://codedocs.xyz/LoganBarnes/ltb-net.svg
+[docs-link]: https://codedocs.xyz/LoganBarnes/ltb-net
 
 [grpc-link]: https://grpc.io/
